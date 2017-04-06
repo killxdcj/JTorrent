@@ -49,16 +49,16 @@ public class DHT {
 //            node = new Node(InetAddress.getByName("router.bittorrent.com"), 6881);
 //            sendPingReq(node);
 //            sendGetPeerReq(node, infohash);
-//            node = new Node(InetAddress.getByName("router.utorrent.com"), 6881);
-//            sendPingReq(node);
-//            sendGetPeerReq(node, infohash);
+            node = new Node(InetAddress.getByName("router.utorrent.com"), 6881);
+            sendPingReq(node);
+            sendGetPeerReq(node, infohash);
 //            node = new Node(InetAddress.getByName("dht.transmissionbt.com"), 6881);
 //            sendPingReq(node);
 //            sendGetPeerReq(node, infohash);
 
-            node = new Node(InetAddress.getByName("5.189.183.129"), 46907);
-            sendPingReq(node);
-            sendGetPeerReq(node, infohash);
+//            node = new Node(InetAddress.getByName("5.189.183.129"), 46907);
+//            sendPingReq(node);
+//            sendGetPeerReq(node, infohash);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -183,7 +183,7 @@ public class DHT {
     }
 
     private void handlePingResp(KRPC krpcPacket, DatagramPacket packet) {
-//        System.out.println("ping resp:" + krpcPacket);
+        System.out.println("ping resp:" + packet.getAddress() + ", " + krpcPacket);
     }
 
     private void handleFindNodeReq(KRPC krpcPacket, DatagramPacket packet) {
@@ -204,7 +204,8 @@ public class DHT {
         if (respData.containsKey(KRPC.NODES)) {
             List<Node> nodes = JTorrentUtils.deCompactNodeInfos(respData.get(KRPC.NODES).asBytes());
             for (Node node : nodes) {
-                System.out.println(node);
+//                System.out.println(node);
+                sendPingReq(node);
             }
         } else {
             BencodedList peers = (BencodedList) respData.get(KRPC.VALUES);

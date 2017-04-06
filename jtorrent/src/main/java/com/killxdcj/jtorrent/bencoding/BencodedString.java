@@ -9,11 +9,11 @@ import java.util.Arrays;
  * Date: 2017/04/04
  * Time: 14:44
  */
-public class BencodedString extends AbstractBencodedValue {
+public class BencodedString extends AbstractBencodedValue implements Comparable {
     private byte[] data;
 
     public BencodedString(byte[] data) {
-        this.data = data;
+        this.data = Arrays.copyOf(data, data.length);
     }
 
     public BencodedString(String str) {
@@ -63,5 +63,37 @@ public class BencodedString extends AbstractBencodedValue {
     @Override
     public int hashCode() {
         return Arrays.hashCode(data);
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        BencodedString that = (BencodedString) o;
+        if (data.length != that.data.length) {
+            return data.length - that.data.length;
+        }
+
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] > that.data[i]) {
+                return 1;
+            } else if (data[i] < that.data[1]) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    public boolean startsWith(BencodedString target) {
+        if (target.data.length > data.length) {
+            return false;
+        }
+
+        for (int i = 0; i < target.data.length; i++) {
+            if (data[i] != target.data[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

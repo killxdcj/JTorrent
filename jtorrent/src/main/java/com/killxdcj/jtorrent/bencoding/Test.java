@@ -34,13 +34,15 @@ public class Test {
 //            e.printStackTrace();
 //        }
 
-        DHT dht = new DHT(new DHTConfig());
-        try {
-            dht.start();
-            Thread.sleep(5000);
-            dht.shutdown();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        DHT dht = new DHT(new DHTConfig());
+//        try {
+//            dht.start();
+//            Thread.sleep(10000);
+//            dht.shutdown();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+        System.out.print(0x1);
     }
 }

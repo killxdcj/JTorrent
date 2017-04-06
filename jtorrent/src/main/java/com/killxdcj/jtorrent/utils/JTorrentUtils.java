@@ -100,4 +100,24 @@ public class JTorrentUtils {
             return null;
         }
     }
+
+    private static final Map<Integer, Byte> bitMap = new HashMap() {{
+        put(7, 1);
+        put(6, 2);
+        put(5, 4);
+        put(4, 8);
+        put(3, 16);
+        put(2, 32);
+        put(1, 64);
+        put(0, 128);
+    }};
+
+    public static void setBit(byte[] data, int idx) {
+        if (idx >= data.length) {
+            return;
+        }
+
+        int dataIndex = idx / 8;
+        data[dataIndex] = (byte) (data[dataIndex] | bitMap.get(idx % 8));
+    }
 }
