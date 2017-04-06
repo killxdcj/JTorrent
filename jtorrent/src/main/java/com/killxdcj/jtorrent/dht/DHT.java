@@ -13,9 +13,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.sql.Time;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created with IntelliJ IDEA.
@@ -33,6 +36,12 @@ public class DHT {
     private DatagramSocket datagramSocket;
     private TransactionManager transactionManager;
     private ExecutorService worker = Executors.newSingleThreadExecutor();
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10, r -> {
+        Thread t = new Thread(r, "DHT_ScheduledPool");
+        t.setDaemon(true);
+        return t;
+    });
+    private RoutingTable routingTable = new RoutingTable();
 
     public DHT(DHTConfig config) {
         this.config = config;
@@ -43,6 +52,10 @@ public class DHT {
     public void start() throws SocketException {
         datagramSocket = new DatagramSocket(config.getPort());
         worker.submit(this::workProc);
+        pingPrimeNodes();
+        //
+
+
         try {
             BencodedString infohash = new BencodedString(Hex.decodeHex("546cf15f724d19c4319cc17b179d7e035f89c1f4".toCharArray()));
             Node node = null;
@@ -64,9 +77,46 @@ public class DHT {
         }
     }
 
+    private void startFindNodeSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+//            routingTable.
+        }, 0, config.getFindNodePeriod(), TimeUnit.MILLISECONDS);
+    }
+
+    private void startPingSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+
+        }, 0, config.getNodePingPeriod(), TimeUnit.MILLISECONDS);
+    }
+
+    private void startNodeCheckSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+
+        }, 0, config.getNodeCheckPeriod(), TimeUnit.MILLISECONDS);
+    }
+
+    private void startRoutingTableRebuildSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+
+        }, 0, config.getRoutingTableRebuildPerior(), TimeUnit.MILLISECONDS);
+    }
+
+    private void pingPrimeNodes() {
+        for (String addr : config.getPrimeNodes()) {
+            try {
+                String[] ipPort = addr.split(":");
+                Node node = new Node(InetAddress.getByName(ipPort[0]), Integer.parseInt(ipPort[1]));
+                sendPingReq(node);
+            } catch (Exception e) {
+                LOGGER.error("pingPrimeNodes error, node:{}", addr, e);
+            }
+        }
+    }
+
     public void shutdown() {
         shutdown = true;
         worker.shutdown();
+        scheduledExecutorService.shutdown();
         datagramSocket.close();
     }
 
@@ -85,6 +135,15 @@ public class DHT {
             transactionManager.putTransaction(new Transaction(node, krpc));
         } catch (Exception e) {
             LOGGER.error("sendPingReq error, node:{}", node, e);
+        }
+    }
+
+    private void sendPingResp(Node node, BencodedString transId) {
+        try {
+            KRPC krpc = KRPC.buildPingRespPacket(transId, nodeId);
+            sendKrpcPacket(node, krpc);
+        } catch (Exception e) {
+            LOGGER.error("sendPingResp error, node:{}", node, e);
         }
     }
 
@@ -115,7 +174,7 @@ public class DHT {
     }
 
     private void workProc() {
-        while (true) {
+        while (!shutdown) {
             try {
                 DatagramPacket packet = new DatagramPacket(new byte[config.getMessage_max_size()], config.getMessage_max_size());
                 datagramSocket.receive(packet);
@@ -125,47 +184,10 @@ public class DHT {
                 LOGGER.info("recv new packet, ip:{}, port:{}, packet:{}",
                         packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
                 if (krpcPacket.transType() == KRPC.TransType.QUERY) {
-                    switch (krpcPacket.action()) {
-                        case PING:
-                            handlePingReq(krpcPacket, packet);
-                            break;
-                        case FIND_NODE:
-                            handleFindNodeReq(krpcPacket, packet);
-                            break;
-                        case GET_PEERS:
-                            handleGetPeersReq(krpcPacket, packet);
-                            break;
-                        case ANNOUNCE_PEER:
-                            handleAnnouncePeerReq(krpcPacket, packet);
-                            break;
-                        default:
-                            LOGGER.warn("unsuported krpc packet type, packet:{}", krpcPacket);
-                            break;
-                    }
+                    handleRequest(packet, krpcPacket);
                 } else if (krpcPacket.transType() == KRPC.TransType.RESPONSE) {
-                    Transaction transaction = transactionManager.getTransaction(krpcPacket.getTransId());
-                    if (transaction == null) {
-                        LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
-                        continue;
-                    }
-
-                    switch (transaction.getKrpc().action()) {
-                        case PING:
-                            handlePingResp(krpcPacket, packet);
-                            break;
-                        case FIND_NODE:
-                            handleFindNodeResp(krpcPacket, packet);
-                            break;
-                        case GET_PEERS:
-                            handleGetPeersResp(krpcPacket, packet);
-                            break;
-                        case ANNOUNCE_PEER:
-                            handleAnnouncePeerResp(krpcPacket, packet);
-                            break;
-                        default:
-                            LOGGER.warn("unsuported krpc packet type, packet:{}", krpcPacket);
-                            break;
-                    }
+                    handleResponse(packet, krpcPacket);
+                    continue;
                 } else {
                     LOGGER.error("node response error, ip:{}, port:{}, packet",
                             packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
@@ -177,13 +199,61 @@ public class DHT {
         }
     }
 
-    private void handlePingReq(KRPC krpcPacket, DatagramPacket packet) {
-//        Node node = new Node(packet.getAddress(), packet.getPort());
+    private void handleRequest(DatagramPacket packet, KRPC krpcPacket) {
+        switch (krpcPacket.action()) {
+            case PING:
+                handlePingReq(krpcPacket, packet);
+                break;
+            case FIND_NODE:
+                handleFindNodeReq(krpcPacket, packet);
+                break;
+            case GET_PEERS:
+                handleGetPeersReq(krpcPacket, packet);
+                break;
+            case ANNOUNCE_PEER:
+                handleAnnouncePeerReq(krpcPacket, packet);
+                break;
+            default:
+                LOGGER.warn("unsuported krpc packet type, packet:{}", krpcPacket);
+                break;
+        }
+    }
 
+    private void handleResponse(DatagramPacket packet, KRPC krpcPacket) {
+        Transaction transaction = transactionManager.getTransaction(krpcPacket.getTransId());
+        if (transaction == null) {
+            LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
+            return;
+        }
+
+        switch (transaction.getKrpc().action()) {
+            case PING:
+                handlePingResp(krpcPacket, packet);
+                break;
+            case FIND_NODE:
+                handleFindNodeResp(krpcPacket, packet);
+                break;
+            case GET_PEERS:
+                handleGetPeersResp(krpcPacket, packet);
+                break;
+            case ANNOUNCE_PEER:
+                handleAnnouncePeerResp(krpcPacket, packet);
+                break;
+            default:
+                LOGGER.warn("unsuported krpc packet type, packet:{}", krpcPacket);
+                break;
+        }
+    }
+
+    private void handlePingReq(KRPC krpcPacket, DatagramPacket packet) {
+        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+        routingTable.putNode(node);
+        sendPingResp(node, krpcPacket.getTransId());
     }
 
     private void handlePingResp(KRPC krpcPacket, DatagramPacket packet) {
-        System.out.println("ping resp:" + packet.getAddress() + ", " + krpcPacket);
+        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+        routingTable.putNode(node);
     }
 
     private void handleFindNodeReq(KRPC krpcPacket, DatagramPacket packet) {
@@ -191,7 +261,15 @@ public class DHT {
     }
 
     private void handleFindNodeResp(KRPC krpcPacket, DatagramPacket packet) {
-        System.out.println("findNode resp:" + krpcPacket);
+        BencodedMap respData = (BencodedMap) krpcPacket.getData().get(KRPC.RESPONSE_DATA);
+        if (!respData.containsKey(KRPC.NODES)) {
+            LOGGER.error("findNode resp has no node, nodeId:{}, ip:{}", krpcPacket.getId(), packet.getAddress().getHostAddress());
+            return;
+        }
+
+        for (Node node : JTorrentUtils.deCompactNodeInfos(respData.get(KRPC.NODES).asBytes())) {
+            sendPingReq(node);
+        }
     }
 
     private void handleGetPeersReq(KRPC krpcPacket, DatagramPacket packet) {

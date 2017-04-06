@@ -13,6 +13,9 @@ import java.util.List;
 public class RoutingTable {
     private Buckets[] bucketss = {new Buckets()};
 
+    public RoutingTable() {
+    }
+
     public RoutingTable(Buckets[] bucketss) {
         this.bucketss = bucketss;
     }

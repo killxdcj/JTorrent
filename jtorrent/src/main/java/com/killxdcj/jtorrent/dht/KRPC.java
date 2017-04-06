@@ -115,6 +115,10 @@ public class KRPC {
         return data;
     }
 
+    public BencodedString getId() {
+        return (BencodedString) data.get(ID);
+    }
+
     public void validate() throws UnsupportedDataTypeException {
         if (!(data instanceof BencodedMap)) {
             throw new UnsupportedDataTypeException("krpc packet must be dict");
