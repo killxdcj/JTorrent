@@ -86,4 +86,8 @@ public class Bencoding {
 
         return -1;
     }
+
+    public int getCurIndex() {
+        return curIndex;
+    }
 }

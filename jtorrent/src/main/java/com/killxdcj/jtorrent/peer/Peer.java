@@ -9,8 +9,8 @@ import java.net.InetAddress;
  * Time: 17:29
  */
 public class Peer {
-    private InetAddress addr;
-    private int port;
+    protected InetAddress addr;
+    protected int port;
 
     public Peer(InetAddress addr, int port) {
         this.addr = addr;

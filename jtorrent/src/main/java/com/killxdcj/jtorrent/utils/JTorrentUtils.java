@@ -43,6 +43,7 @@ public class JTorrentUtils {
             byteBuffer.put(node.getAddr().getAddress());
             byteBuffer.put((byte) (0xff & (node.getPort() >> 8)));
             byteBuffer.put((byte) (0xff & node.getPort()));
+            Integer xx = 100;
         }
         return byteBuffer.array();
     }
@@ -93,7 +94,7 @@ public class JTorrentUtils {
 
         try {
             InetAddress addr = InetAddress.getByAddress(Arrays.copyOfRange(data, 0, 4));
-            int port = 0xff & data[4] | (data[5] & 0xff) << 8;
+            int port = (0xff & data[4]) << 8 | data[5] & 0xff;
             return new Peer(addr, port);
         } catch (Exception e) {
             LOGGER.error("deCompactPeerInfo errot, data:{}", Arrays.toString(data), e);
@@ -122,6 +123,10 @@ public class JTorrentUtils {
     }
 
     public static long bytes2long(byte[] data) {
+        if (data.length > 8) {
+            throw new RuntimeException("leng must less then 8 byte");
+        }
+
         long ret = 0;
         for (int idx = 0; idx < data.length; ++idx) {
             ret = ret << 8;
