@@ -59,9 +59,7 @@ public class BencodedList extends AbstractBencodedValue {
 
     @Override
     public String toString() {
-        return "BencodedList{" +
-                "datas=" + datas +
-                "}";
+        return "" + datas;
     }
 
     @Override

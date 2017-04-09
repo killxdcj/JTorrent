@@ -102,22 +102,31 @@ public class JTorrentUtils {
     }
 
     private static final Map<Integer, Byte> bitMap = new HashMap() {{
-        put(7, 1);
-        put(6, 2);
-        put(5, 4);
-        put(4, 8);
-        put(3, 16);
-        put(2, 32);
-        put(1, 64);
-        put(0, 128);
+        put(7, (byte) 1);
+        put(6, (byte) 2);
+        put(5, (byte) 4);
+        put(4, (byte) 8);
+        put(3, (byte) 16);
+        put(2, (byte) 32);
+        put(1, (byte) 64);
+        put(0, (byte) 128);
     }};
 
     public static void setBit(byte[] data, int idx) {
-        if (idx >= data.length) {
+        if (idx >= data.length * 8) {
             return;
         }
 
         int dataIndex = idx / 8;
         data[dataIndex] = (byte) (data[dataIndex] | bitMap.get(idx % 8));
+    }
+
+    public static long bytes2long(byte[] data) {
+        long ret = 0;
+        for (int idx = 0; idx < data.length; ++idx) {
+            ret = ret << 8;
+            ret = ret | (data[idx] & 0xff);
+        }
+        return ret;
     }
 }

@@ -11,7 +11,7 @@ import java.util.List;
  */
 public class DHTConfig {
     private int message_max_size = 10 * 1024 * 1024;
-    private int port = 6881;
+    private int port = 9613;
     private List<String/* ip:port */> primeNodes = new ArrayList(){{
         add("router.bittorrent.com:6881");
         add("router.utorrent.com:6881");
@@ -19,10 +19,15 @@ public class DHTConfig {
     }};
     private int nodesPerBuckets = 8;
     private int maxNodes = -1;
-    private int findNodePeriod = 5 * 60 * 1000;
-    private int nodeCheckPeriod = 10 * 60 * 1000;
+    private int findNodePeriod =  10 * 1000;
     private int routingTableRebuildPerior = 30 * 60 * 1000;
-    private int nodePingPeriod = 10 * 60 * 1000;
+    private int nodePingCheckPeriod = 5 * 60 * 1000;
+    private int nodeMaxUnactiveTimeBeforePing = 10 * 60 * 1000;
+    private int nodeMaxUnactiveTime = 30 * 60 * 1000;
+    private int queryPeersRequestCheckPeriod = 1 * 60 * 1000;
+    private int queryPeersRequestMaxAliveTime = 24 * 60 * 60 * 1000;
+    private int queryPeersRequestTimeout = 23 * 60 * 60 * 1000;
+    private int queryPeersRequestMaxqueryTimes = 500000;
 
     public int getMessage_max_size() {
         return message_max_size;
@@ -72,14 +77,6 @@ public class DHTConfig {
         this.findNodePeriod = findNodePeriod;
     }
 
-    public int getNodeCheckPeriod() {
-        return nodeCheckPeriod;
-    }
-
-    public void setNodeCheckPeriod(int nodeCheckPeriod) {
-        this.nodeCheckPeriod = nodeCheckPeriod;
-    }
-
     public int getRoutingTableRebuildPerior() {
         return routingTableRebuildPerior;
     }
@@ -88,11 +85,59 @@ public class DHTConfig {
         this.routingTableRebuildPerior = routingTableRebuildPerior;
     }
 
-    public int getNodePingPeriod() {
-        return nodePingPeriod;
+    public int getNodePingCheckPeriod() {
+        return nodePingCheckPeriod;
     }
 
-    public void setNodePingPeriod(int nodePingPeriod) {
-        this.nodePingPeriod = nodePingPeriod;
+    public void setNodePingCheckPeriod(int nodePingCheckPeriod) {
+        this.nodePingCheckPeriod = nodePingCheckPeriod;
+    }
+
+    public int getNodeMaxUnactiveTimeBeforePing() {
+        return nodeMaxUnactiveTimeBeforePing;
+    }
+
+    public void setNodeMaxUnactiveTimeBeforePing(int nodeMaxUnactiveTimeBeforePing) {
+        this.nodeMaxUnactiveTimeBeforePing = nodeMaxUnactiveTimeBeforePing;
+    }
+
+    public int getNodeMaxUnactiveTime() {
+        return nodeMaxUnactiveTime;
+    }
+
+    public void setNodeMaxUnactiveTime(int nodeMaxUnactiveTime) {
+        this.nodeMaxUnactiveTime = nodeMaxUnactiveTime;
+    }
+
+    public int getQueryPeersRequestCheckPeriod() {
+        return queryPeersRequestCheckPeriod;
+    }
+
+    public void setQueryPeersRequestCheckPeriod(int queryPeersRequestCheckPeriod) {
+        this.queryPeersRequestCheckPeriod = queryPeersRequestCheckPeriod;
+    }
+
+    public int getQueryPeersRequestMaxAliveTime() {
+        return queryPeersRequestMaxAliveTime;
+    }
+
+    public void setQueryPeersRequestMaxAliveTime(int queryPeersRequestMaxAliveTime) {
+        this.queryPeersRequestMaxAliveTime = queryPeersRequestMaxAliveTime;
+    }
+
+    public int getQueryPeersRequestTimeout() {
+        return queryPeersRequestTimeout;
+    }
+
+    public void setQueryPeersRequestTimeout(int queryPeersRequestTimeout) {
+        this.queryPeersRequestTimeout = queryPeersRequestTimeout;
+    }
+
+    public int getQueryPeersRequestMaxqueryTimes() {
+        return queryPeersRequestMaxqueryTimes;
+    }
+
+    public void setQueryPeersRequestMaxqueryTimes(int queryPeersRequestMaxqueryTimes) {
+        this.queryPeersRequestMaxqueryTimes = queryPeersRequestMaxqueryTimes;
     }
 }

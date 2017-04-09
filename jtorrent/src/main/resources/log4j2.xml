@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <Console name="STDOUT_ROOT" target="SYSTEM_OUT">
+            <PatternLayout pattern="ROOT:%d %-5p %C %L - %m%n" />
+        </Console>
+        <RollingFile name="jtorrent" fileName="./logs/log.log"
+                     filePattern="./logs/logs_%d{yyyy-MM-dd}_%i.log">
+            <PatternLayout pattern="%d %p %c %L %m%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true"
+                                           interval="24" />
+                <!--<SizeBasedTriggeringPolicy size="128KB" />-->
+            </Policies>
+            <DefaultRolloverStrategy max="10" />
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.opensymphony.xwork2" level="trace">
+            <AppenderRef ref="jtorrent" />
+        </Logger>
+        <Logger name="org.apache.struts2" level="debug">
+            <AppenderRef ref="jtorrent" />
+        </Logger>
+        <Logger name="org.hibernate" level="debug">
+            <AppenderRef ref="jtorrent"></AppenderRef>
+        </Logger>
+        <Root level="info">
+            <!--<AppenderRef ref="STDOUT_ROOT" />-->
+            <AppenderRef ref="jtorrent"></AppenderRef>
+        </Root>
+    </Loggers>
+</Configuration>

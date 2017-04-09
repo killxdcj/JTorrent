@@ -65,9 +65,7 @@ public class BencodedMap extends AbstractBencodedValue {
 
     @Override
     public String toString() {
-        return "BencodedMap{" +
-                "data=" + data +
-                "}";
+        return "{" + data + "}";
     }
 
     @Override

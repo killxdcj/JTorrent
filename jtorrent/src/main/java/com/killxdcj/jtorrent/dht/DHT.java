@@ -4,6 +4,8 @@ import com.killxdcj.jtorrent.bencoding.*;
 import com.killxdcj.jtorrent.config.DHTConfig;
 import com.killxdcj.jtorrent.peer.Peer;
 import com.killxdcj.jtorrent.utils.JTorrentUtils;
+import com.killxdcj.jtorrent.utils.TimeUtils;
+import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,12 +15,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.sql.Time;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -43,6 +41,8 @@ public class DHT {
     });
     private RoutingTable routingTable = new RoutingTable();
 
+    private Map<BencodedString, QueryPeersRequest> queryPeersRequestMap = new ConcurrentHashMap<>();
+
     public DHT(DHTConfig config) {
         this.config = config;
         nodeId = JTorrentUtils.genNodeId();
@@ -53,52 +53,110 @@ public class DHT {
         datagramSocket = new DatagramSocket(config.getPort());
         worker.submit(this::workProc);
         pingPrimeNodes();
-        //
+        startScheduleTask();
+    }
 
-
-        try {
-            BencodedString infohash = new BencodedString(Hex.decodeHex("546cf15f724d19c4319cc17b179d7e035f89c1f4".toCharArray()));
-            Node node = null;
-//            node = new Node(InetAddress.getByName("router.bittorrent.com"), 6881);
-//            sendPingReq(node);
-//            sendGetPeerReq(node, infohash);
-            node = new Node(InetAddress.getByName("router.utorrent.com"), 6881);
-            sendPingReq(node);
-            sendGetPeerReq(node, infohash);
-//            node = new Node(InetAddress.getByName("dht.transmissionbt.com"), 6881);
-//            sendPingReq(node);
-//            sendGetPeerReq(node, infohash);
-
-//            node = new Node(InetAddress.getByName("5.189.183.129"), 46907);
-//            sendPingReq(node);
-//            sendGetPeerReq(node, infohash);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void startScheduleTask() {
+        startLogStatsSchedule();
+        startFindNodeSchedule();
+        startPingCheckSchedule();
+        startRoutingTableRebuildSchedule();
+        startQueryPeersRequestCheckSchedule();
     }
 
     private void startFindNodeSchedule() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-//            routingTable.
-        }, 0, config.getFindNodePeriod(), TimeUnit.MILLISECONDS);
+            LOGGER.info("SCHEDULE_FIND_NODE START");
+            byte[] randomId = Arrays.copyOf(nodeId.asBytes(), 20);
+            byte[] randomIdNext = JTorrentUtils.genByte(10);
+            for (int i = 0; i < randomIdNext.length; i++) {
+                randomId[10 + i] = randomIdNext[i];
+            }
+            BencodedString xxxx = new BencodedString(randomId);
+            long startTime = TimeUtils.getCurTime();
+            List<Node> nodes = routingTable.findNode(xxxx);
+            for (Node node : nodes) {
+                sendFindNodeReq(node, xxxx);
+            }
+            xxx(xxxx);
+            LOGGER.info("SCHEDULE_FIND_NODE END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+        }, 5000, config.getFindNodePeriod(), TimeUnit.MILLISECONDS);
     }
 
-    private void startPingSchedule() {
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-
-        }, 0, config.getNodePingPeriod(), TimeUnit.MILLISECONDS);
+    private void xxx(BencodedString id) {
+        for (String addr : config.getPrimeNodes()) {
+            try {
+                String[] ipPort = addr.split(":");
+                Node node = new Node(InetAddress.getByName(ipPort[0]), Integer.parseInt(ipPort[1]));
+                sendFindNodeReq(node, id);
+            } catch (Exception e) {
+                LOGGER.error("pingPrimeNodes error, node:{}", addr, e);
+            }
+        }
     }
 
-    private void startNodeCheckSchedule() {
+    private void startPingCheckSchedule() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-
-        }, 0, config.getNodeCheckPeriod(), TimeUnit.MILLISECONDS);
+            LOGGER.info("SCHEDULE_PING_CHECK START");
+            long startTime = TimeUtils.getCurTime();
+            List<Node> nodes = routingTable.getAllNode();
+            List<BencodedString> nodesToRemove = new ArrayList<>();
+            for (Node node : nodes) {
+                long unactiveTime = TimeUtils.getElapseTime(node.getLastActive(), TimeUnit.MILLISECONDS);
+                if (unactiveTime > config.getNodeMaxUnactiveTime()) {
+                    nodesToRemove.add(node.getId());
+                    continue;
+                }
+                if (unactiveTime >= config.getNodeMaxUnactiveTimeBeforePing()) {
+                    sendPingReq(node);
+                }
+            }
+            if (nodesToRemove.size() > 0) {
+                LOGGER.info("SCHEDULE_PING_CHECK remove timeout node, size:{}", nodesToRemove.size());
+                routingTable.removeNodes(nodesToRemove);
+            }
+            LOGGER.info("SCHEDULE_PING_CHECK END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+        }, 0, config.getNodePingCheckPeriod(), TimeUnit.MILLISECONDS);
     }
 
     private void startRoutingTableRebuildSchedule() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
 
         }, 0, config.getRoutingTableRebuildPerior(), TimeUnit.MILLISECONDS);
+    }
+
+    private void startLogStatsSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            LOGGER.info("SCHEDULE_LOG_STATS START");
+            long startTime = TimeUtils.getCurTime();
+            routingTable.state();
+            LOGGER.info("SCHEDULE_LOG_STATS END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+        }, 0, 60 * 1000, TimeUnit.MILLISECONDS);
+    }
+
+    private void startQueryPeersRequestCheckSchedule() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            LOGGER.info("SCHEDULE_QUERY_PEERS_REQUEST_CHECK START");
+            long startTime = TimeUtils.getCurTime();
+            for (BencodedString infohash : queryPeersRequestMap.keySet()) {
+                QueryPeersRequest queryPeersRequest = queryPeersRequestMap.get(infohash);
+                if (queryPeersRequest == null) continue;
+                if (queryPeersRequest.aliveTime() > config.getQueryPeersRequestTimeout()
+                        || queryPeersRequest.ignoreSize() > config.getQueryPeersRequestMaxqueryTimes()) {
+                    // TODO notify query timeout if needed
+                    queryPeersRequestMap.remove(infohash);
+                    LOGGER.info("query peers over limit, infohash:{}, queryed node:{}",
+                            infohash, queryPeersRequest.ignoreSize());
+                } else if (queryPeersRequest.aliveTime() > config.getQueryPeersRequestMaxAliveTime()) {
+                    queryPeersRequest.markStopQuery();
+                    LOGGER.info("query peers over maxAlivetime, infohash:{}", infohash);
+                } else {
+                    LOGGER.info("query peers stats, infohash:{}, queryed node:{}, querytimes:{}", infohash.asHexString(), queryPeersRequest.ignoreSize(), queryPeersRequest.getQueryTimes());
+                }
+            }
+
+            LOGGER.info("SCHEDULE_QUERY_PEERS_REQUEST_CHECK END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+        }, 0, config.getQueryPeersRequestCheckPeriod(), TimeUnit.MILLISECONDS);
     }
 
     private void pingPrimeNodes() {
@@ -120,11 +178,30 @@ public class DHT {
         datagramSocket.close();
     }
 
-    public List<Peer> queryPeers(byte[] infohash) {
+    public List<Peer> queryPeers(String infoHashHex) throws DecoderException {
+        return queryPeers(new BencodedString(Hex.decodeHex(infoHashHex.toCharArray())));
+    }
+
+    public List<Peer> queryPeers(BencodedString infohash) {
+        // TODO
+
+        // when routingtable con't fing peer, do this
+//        List<Node> nodes = routingTable.findNodeByInfoHash(infohash);
+        List<Node> nodes = routingTable.getAllNode();
+        QueryPeersRequest queryPeersRequest = new QueryPeersRequest(infohash);
+        queryPeersRequest.ignore(nodeId);
+        queryPeersRequestMap.put(infohash, queryPeersRequest);
+
+        for (Node node : nodes) {
+            queryPeersRequest.ignore(node.getId());
+            queryPeersRequest.incrQueryTimes();
+            sendGetPeerReq(node, infohash);
+        }
+
         return null;
     }
 
-    public List<Peer> queryPeers(byte[] infohash, IDHTCallBack callBack) {
+    public List<Peer> queryPeers(BencodedString infohash, IDHTCallBack callBack) {
         return null;
     }
 
@@ -181,25 +258,24 @@ public class DHT {
                 IBencodedValue value = new Bencoding(packet.getData(), 0, packet.getLength()).decode();
                 KRPC krpcPacket = new KRPC((BencodedMap) value);
                 krpcPacket.validate();
-                LOGGER.info("recv new packet, ip:{}, port:{}, packet:{}",
-                        packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
                 if (krpcPacket.transType() == KRPC.TransType.QUERY) {
                     handleRequest(packet, krpcPacket);
                 } else if (krpcPacket.transType() == KRPC.TransType.RESPONSE) {
                     handleResponse(packet, krpcPacket);
                     continue;
                 } else {
-                    LOGGER.error("node response error, ip:{}, port:{}, packet",
+                    LOGGER.error("unknow packet, ip:{}, port:{}, packet:{}",
                             packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
-                    System.out.println("resp is error, " + krpcPacket);
                 }
             } catch (Exception e) {
-                LOGGER.error("dht error", e);
+                LOGGER.error("mainproc error, {}", e.getMessage(), e);
             }
         }
     }
 
-    private void handleRequest(DatagramPacket packet, KRPC krpcPacket) {
+    private void handleRequest(DatagramPacket packet, KRPC krpcPacket) throws IOException {
+        LOGGER.info("recv request packet, id:{}, action:{}, ip:{}, port:{}",
+                krpcPacket.getId().asHexString(), krpcPacket.action(), packet.getAddress().getHostAddress(), packet.getPort());
         switch (krpcPacket.action()) {
             case PING:
                 handlePingReq(krpcPacket, packet);
@@ -221,6 +297,8 @@ public class DHT {
 
     private void handleResponse(DatagramPacket packet, KRPC krpcPacket) {
         Transaction transaction = transactionManager.getTransaction(krpcPacket.getTransId());
+        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
+                krpcPacket.getId().asHexString(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
         if (transaction == null) {
             LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
             return;
@@ -228,16 +306,16 @@ public class DHT {
 
         switch (transaction.getKrpc().action()) {
             case PING:
-                handlePingResp(krpcPacket, packet);
+                handlePingResp(transaction.getKrpc(), krpcPacket, packet);
                 break;
             case FIND_NODE:
-                handleFindNodeResp(krpcPacket, packet);
+                handleFindNodeResp(transaction.getKrpc(), krpcPacket, packet);
                 break;
             case GET_PEERS:
-                handleGetPeersResp(krpcPacket, packet);
+                handleGetPeersResp(transaction.getKrpc(), krpcPacket, packet);
                 break;
             case ANNOUNCE_PEER:
-                handleAnnouncePeerResp(krpcPacket, packet);
+                handleAnnouncePeerResp(transaction.getKrpc(), krpcPacket, packet);
                 break;
             default:
                 LOGGER.warn("unsuported krpc packet type, packet:{}", krpcPacket);
@@ -251,54 +329,142 @@ public class DHT {
         sendPingResp(node, krpcPacket.getTransId());
     }
 
-    private void handlePingResp(KRPC krpcPacket, DatagramPacket packet) {
-        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+    private void handlePingResp(KRPC req, KRPC resp, DatagramPacket packet) {
+        Node node = new Node(resp.getId(), packet.getAddress(), packet.getPort());
         routingTable.putNode(node);
     }
 
-    private void handleFindNodeReq(KRPC krpcPacket, DatagramPacket packet) {
+    private void handleFindNodeReq(KRPC krpcPacket, DatagramPacket packet) throws IOException {
+        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+        routingTable.putNode(node);
 
-    }
-
-    private void handleFindNodeResp(KRPC krpcPacket, DatagramPacket packet) {
-        BencodedMap respData = (BencodedMap) krpcPacket.getData().get(KRPC.RESPONSE_DATA);
-        if (!respData.containsKey(KRPC.NODES)) {
-            LOGGER.error("findNode resp has no node, nodeId:{}, ip:{}", krpcPacket.getId(), packet.getAddress().getHostAddress());
+        BencodedString targetId = krpcPacket.getTargetId();
+        if (targetId == null) {
+            LOGGER.warn("get findnode request, but targetid is null, {}", krpcPacket);
             return;
         }
 
-        for (Node node : JTorrentUtils.deCompactNodeInfos(respData.get(KRPC.NODES).asBytes())) {
-            sendPingReq(node);
+        List<Node> nodes = routingTable.findNode(targetId);
+        KRPC resp = KRPC.buildFindNodeRespPacket(krpcPacket.getTransId(), nodeId, nodes);
+        sendKrpcPacket(node, resp);
+    }
+
+    private void handleFindNodeResp(KRPC req, KRPC resp, DatagramPacket packet) {
+        BencodedMap respData = (BencodedMap) resp.getData().get(KRPC.RESPONSE_DATA);
+        if (!respData.containsKey(KRPC.NODES)) {
+            LOGGER.error("findNode resp has no node, nodeId:{}, ip:{}", resp.getId(), packet.getAddress().getHostAddress());
+            return;
+        }
+
+        List<Node> nodes = JTorrentUtils.deCompactNodeInfos(respData.get(KRPC.NODES).asBytes());
+        for (Node node : nodes) {
+            if (!routingTable.contains(node.getId())) {
+                sendPingReq(node);
+            }
+        }
+
+        for (Node node : nodes) {
+            for (QueryPeersRequest queryPeersRequest: queryPeersRequestMap.values()) {
+                if (!queryPeersRequest.isIgnore(node.getId())) {
+                    queryPeersRequest.ignore(node.getId());
+                    queryPeersRequest.incrQueryTimes();
+                    sendGetPeerReq(node, queryPeersRequest.getInfohash());
+                }
+            }
         }
     }
 
-    private void handleGetPeersReq(KRPC krpcPacket, DatagramPacket packet) {
+    private void handleGetPeersReq(KRPC krpcPacket, DatagramPacket packet) throws IOException {
+        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+        routingTable.putNode(node);
 
+        BencodedString infohash = (BencodedString) krpcPacket.getData().get(KRPC.INFO_HASH);
+
+        // TODO notify an download
+        LOGGER.info("get getpeers request, infohash:{}", infohash.asHexString());
+
+        // TODO query from routing table
+        KRPC resp;
+        List<Peer> peers = routingTable.findPeerByInfoHash(infohash);
+        if (!peers.isEmpty()) {
+            resp = KRPC.buildGetPeersRespPacketWithPeers(krpcPacket.getTransId(), nodeId, "caojian", peers);
+        } else {
+            List<Node> nodes = routingTable.findNodeByInfoHash(infohash);
+            resp = KRPC.buildGetPeersRespPacketWithNodes(krpcPacket.getTransId(), nodeId, "caojian", nodes);
+        }
+        sendKrpcPacket(node, resp);
     }
 
-    private void handleGetPeersResp(KRPC krpcPacket, DatagramPacket packet) {
-//        System.out.println("resp : " + krpcPacket);
-        BencodedMap respData = (BencodedMap) krpcPacket.getData().get(KRPC.RESPONSE_DATA);
+    private void handleGetPeersResp(KRPC req, KRPC resp, DatagramPacket packet) {
+        BencodedMap respData = (BencodedMap) resp.getData().get(KRPC.RESPONSE_DATA);
+        BencodedMap reqData = (BencodedMap) req.getData().get(KRPC.QUERY_ARGS);
         if (respData.containsKey(KRPC.NODES)) {
             List<Node> nodes = JTorrentUtils.deCompactNodeInfos(respData.get(KRPC.NODES).asBytes());
             for (Node node : nodes) {
-//                System.out.println(node);
-                sendPingReq(node);
+                if (!routingTable.contains(node.getId())) {
+                    sendPingReq(node);
+                }
+            }
+
+            BencodedString infohash = (BencodedString) reqData.get(KRPC.INFO_HASH);
+            QueryPeersRequest queryPeersRequest = queryPeersRequestMap.get(infohash);
+            if (queryPeersRequest != null && queryPeersRequest.isContinueQuery()) {
+                for (Node node : nodes) {
+                    if (!queryPeersRequest.isIgnore(node.getId())) {
+                        queryPeersRequest.ignore(node.getId());
+                        queryPeersRequest.incrQueryTimes();
+                        sendGetPeerReq(node, infohash);
+                    }
+                }
+            }
+        } else if (respData.containsKey(KRPC.VALUES)){
+            LOGGER.info("get peers result, packet:{}", resp);
+            List<Peer> peers = new ArrayList<>();
+            BencodedList peerList = (BencodedList) respData.get(KRPC.VALUES);
+            if (peerList.size() > 0) {
+                BencodedString infohash = (BencodedString) reqData.get(KRPC.INFO_HASH);
+                QueryPeersRequest queryPeersRequest = queryPeersRequestMap.get(infohash);
+                queryPeersRequestMap.remove(infohash);
+
+                for (int i = 0; i < peerList.size(); i++) {
+                    Peer peer = JTorrentUtils.deCompactPeerInfo(peerList.get(i).asBytes());
+                    peers.add(peer);
+                    LOGGER.info("get peers result, infohash:{}, peerIp:{}, peerPort:{}",
+                            infohash.asHexString(), peer.getAddr().getHostAddress(), peer.getPort());
+                }
+                routingTable.putPeers(infohash, peers);
+
+                if (queryPeersRequest != null && queryPeersRequest.getIdhtCallBack() != null) {
+                    queryPeersRequest.getIdhtCallBack().onGetPeers(infohash, peers);
+                    queryPeersRequest.markStopQuery();
+                }
             }
         } else {
-            BencodedList peers = (BencodedList) respData.get(KRPC.VALUES);
-            for (int i = 0; i < peers.size(); i++) {
-                Peer peer = JTorrentUtils.deCompactPeerInfo(peers.get(i).asBytes());
-                System.out.println(peer);
-            }
+            LOGGER.error("invalid getpeers response packet, {}", resp);
         }
     }
 
-    private void handleAnnouncePeerReq(KRPC krpcPacket, DatagramPacket packet) {
+    private void handleAnnouncePeerReq(KRPC krpcPacket, DatagramPacket packet) throws IOException {
+        BencodedMap reqData = krpcPacket.getData();
+        BencodedString infohash = (BencodedString) reqData.get(KRPC.INFO_HASH);
 
+        Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
+        routingTable.putNode(node);
+
+        int port = reqData.get(KRPC.PORT).asLong().intValue();
+        if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
+            port = packet.getPort();
+        }
+        Peer peer = new Peer(packet.getAddress(), port);
+        routingTable.putPeer(infohash, peer);
+
+        LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
+
+        KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
+        sendKrpcPacket(node, resp);
     }
 
-    private void handleAnnouncePeerResp(KRPC krpcPacket, DatagramPacket packet) {
-
+    private void handleAnnouncePeerResp(KRPC req, KRPC resp, DatagramPacket packet) {
+        // TODO refresh node last active time
     }
 }

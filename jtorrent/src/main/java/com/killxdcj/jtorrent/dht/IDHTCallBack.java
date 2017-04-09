@@ -1,5 +1,6 @@
 package com.killxdcj.jtorrent.dht;
 
+import com.killxdcj.jtorrent.bencoding.BencodedString;
 import com.killxdcj.jtorrent.peer.Peer;
 
 import java.util.List;
@@ -11,5 +12,5 @@ import java.util.List;
  * Time: 17:34
  */
 public interface IDHTCallBack {
-    public void onGetPeers(byte[] infohash, List<Peer> peers);
+    public void onGetPeers(BencodedString infohash, List<Peer> peers);
 }

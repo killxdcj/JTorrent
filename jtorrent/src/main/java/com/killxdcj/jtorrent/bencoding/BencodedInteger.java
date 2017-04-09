@@ -35,9 +35,10 @@ public class BencodedInteger extends AbstractBencodedValue {
 
     @Override
     public String toString() {
-        return "BencodedInteger{" +
-                "data=" + data +
-                "}";
+//        return "BencodedInteger{" +
+//                "data=" + data +
+//                "}";
+        return "" + data;
     }
 
     @Override

@@ -116,7 +116,19 @@ public class KRPC {
     }
 
     public BencodedString getId() {
-        return (BencodedString) data.get(ID);
+        if (data.containsKey(RESPONSE_DATA)) {
+            return (BencodedString) ((BencodedMap) data.get(RESPONSE_DATA)).get(ID);
+        } else if (data.containsKey(QUERY_ARGS)) {
+            return (BencodedString) ((BencodedMap) data.get(QUERY_ARGS)).get(ID);
+        }
+        return null;
+    }
+
+    public BencodedString getTargetId() {
+        if (data.containsKey(QUERY_ARGS)) {
+            return (BencodedString) ((BencodedMap) data.get(QUERY_ARGS)).get(TARGET);
+        }
+        return null;
     }
 
     public void validate() throws UnsupportedDataTypeException {
@@ -256,6 +268,10 @@ public class KRPC {
         param.put(TOKEN, new BencodedString(token));
         packet.put(QUERY_ARGS, param);
         return new KRPC(packet);
+    }
+
+    public static KRPC buildAnnouncePeerRespPacket(BencodedString transId, BencodedString localNodeId) {
+        return buildPingRespPacket(transId, localNodeId);
     }
 
     public static KRPC buildErrorRespPacket(int errno, String errmsg) {

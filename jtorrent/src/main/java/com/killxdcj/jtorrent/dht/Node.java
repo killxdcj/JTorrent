@@ -1,6 +1,7 @@
 package com.killxdcj.jtorrent.dht;
 
 import com.killxdcj.jtorrent.bencoding.BencodedString;
+import com.killxdcj.jtorrent.utils.TimeUtils;
 
 import java.net.InetAddress;
 import java.util.Arrays;
@@ -16,7 +17,7 @@ public class Node {
     BencodedString id;
     private InetAddress addr;
     int port;
-    Date lastActive;
+    long lastActive;
 
     public Node(InetAddress addr, int port) {
         this.addr = addr;
@@ -27,7 +28,7 @@ public class Node {
         this.id = id;
         this.addr = addr;
         this.port = port;
-        this.lastActive = new Date();
+        this.lastActive = TimeUtils.getCurTime();
     }
 
     public BencodedString getId() {
@@ -54,11 +55,11 @@ public class Node {
         this.port = port;
     }
 
-    public Date getLastActive() {
+    public long getLastActive() {
         return lastActive;
     }
 
-    public void setLastActive(Date lastActive) {
+    public void setLastActive(long lastActive) {
         this.lastActive = lastActive;
     }
 
