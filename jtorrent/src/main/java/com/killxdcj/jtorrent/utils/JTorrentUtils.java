@@ -30,6 +30,19 @@ public class JTorrentUtils {
         return new BencodedString(DigestUtils.sha1(sb.toString()));
     }
 
+    public static BencodedString genPeerId() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("com.killxdcj").append(new Date());
+        byte[] temp = DigestUtils.sha1(sb.toString());
+        temp[0] = (byte) 'U';
+        temp[1] = (byte) 'T';
+        temp[2] = (byte) '2';
+        temp[3] = (byte) '-';
+        temp[4] = (byte) '2';
+        temp[5] = (byte) '0';
+        return new BencodedString(temp);
+    }
+
     public static byte[] genByte(int length) {
         byte[] ret = new byte[length];
         RANDOM.nextBytes(ret);

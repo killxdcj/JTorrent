@@ -61,7 +61,7 @@ public class MetadataFetcher extends Peer implements Runnable {
         super(addr, port);
         this.infohash = infohash;
         this.iFetcherCallback = iFetcherCallback;
-        peerId = JTorrentUtils.genNodeId();
+        peerId = JTorrentUtils.genPeerId();
     }
 
     public interface IFetcherCallback {
@@ -86,7 +86,6 @@ public class MetadataFetcher extends Peer implements Runnable {
             cliChannel.configureBlocking(false);
             if (!cliChannel.connect(new InetSocketAddress(addr, port))) {
                 while (!cliChannel.finishConnect()) {
-                    LOGGER.info("connecting peer, ip:{}, port:{}", addr.getHostAddress(), port);
                     Thread.sleep(DEFAULT_CONNECT_CHECK_PERIOD);
                 }
             }
@@ -94,10 +93,16 @@ public class MetadataFetcher extends Peer implements Runnable {
             sendHandShake();
 
             ByteBuffer handshakeResp = readPacket(68);
-            if (!Arrays.equals(Arrays.copyOf(handshakePrefix, 20), Arrays.copyOf(handshakeResp.array(), 20)) ||
+            byte[] respBytes = handshakeResp.array();
+            if (!Arrays.equals(Arrays.copyOf(handshakePrefix, 20), Arrays.copyOf(respBytes, 20)) ||
                     (handshakeResp.array()[25] & 0x10) == 0) {
-                throw new Exception("handshake error");
+                throw new Exception("handshake error, prefix data error");
             }
+
+            if (!infohash.equals(new BencodedString(Arrays.copyOfRange(respBytes, 28, 48)))) {
+                throw new Exception("handshake error, infohash is diferent");
+            }
+            LOGGER.info("connected to peer:{}", new BencodedString(Arrays.copyOfRange(respBytes, 48, 68)).asHexString());
 
             sendExtHandshake();
 
@@ -108,13 +113,19 @@ public class MetadataFetcher extends Peer implements Runnable {
         } catch (Exception e) {
             iFetcherCallback.onException(e);
             LOGGER.error("fetch etadata error, infohash:{}, ip:{}, port:{}", infohash, addr, port);
-            LOGGER.error("", e);
+            LOGGER.error(e.getMessage(), e);
+            return;
         } finally {
             closeCliChannel();
         }
     }
 
     private void dealPacket(ByteBuffer packet) throws Exception {
+        if (packet.array().length == 0) {
+            // Messages of length zero are keepalives, and ignored
+            return;
+        }
+
         byte extended = packet.get();
         if (extended != EXTENDED) {
             LOGGER.warn("get unknow packet, extended:{}", extended);
@@ -141,7 +152,7 @@ public class MetadataFetcher extends Peer implements Runnable {
             throw new Exception("invalid ExtHandshake packet, m or metadata_size is missed, packet:" + bencodedMap.toString());
         }
 
-        remoteUtMetadataId = bencodedMap.get("m").asLong().byteValue();
+        remoteUtMetadataId = ((BencodedMap) bencodedMap.get("m")).get("ut_metadata").asLong().byteValue();
         meatadataSize = bencodedMap.get("metadata_size").asLong().intValue();
         if (meatadataSize % BLOCK_SIZE > 0) {
             pieceTotal = meatadataSize / BLOCK_SIZE + 1;

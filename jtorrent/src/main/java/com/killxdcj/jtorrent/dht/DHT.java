@@ -28,6 +28,7 @@ public class DHT {
     private static final Logger LOGGER = LoggerFactory.getLogger(DHT.class);
 
     private DHTConfig config;
+    private IDHTCallBack callBack;
 
     private volatile boolean shutdown = false;
     private BencodedString nodeId;
@@ -45,6 +46,13 @@ public class DHT {
 
     public DHT(DHTConfig config) {
         this.config = config;
+        nodeId = JTorrentUtils.genNodeId();
+        transactionManager = new TransactionManager();
+    }
+
+    public DHT(DHTConfig config, IDHTCallBack callBack) {
+        this.config = config;
+        this.callBack = callBack;
         nodeId = JTorrentUtils.genNodeId();
         transactionManager = new TransactionManager();
     }
@@ -384,7 +392,9 @@ public class DHT {
         Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
         routingTable.putNode(node);
 
-        BencodedString infohash = (BencodedString) krpcPacket.getData().get(KRPC.INFO_HASH);
+        BencodedMap reqArgs = (BencodedMap) krpcPacket.getData().get(KRPC.QUERY_ARGS);
+        BencodedString infohash = (BencodedString) reqArgs.get(KRPC.INFO_HASH);
+        callBack.onGetInfoHash(infohash);
 
         // TODO notify an download
         LOGGER.info("get getpeers request, infohash:{}", infohash.asHexString());
@@ -438,11 +448,12 @@ public class DHT {
                             infohash.asHexString(), peer.getAddr().getHostAddress(), peer.getPort());
                 }
                 routingTable.putPeers(infohash, peers);
+//                if (queryPeersRequest != null && queryPeersRequest.getIdhtCallBack() != null) {
+//                    queryPeersRequest.getIdhtCallBack().onGetPeers(infohash, peers);
+//                    queryPeersRequest.markStopQuery();
+//                }
 
-                if (queryPeersRequest != null && queryPeersRequest.getIdhtCallBack() != null) {
-                    queryPeersRequest.getIdhtCallBack().onGetPeers(infohash, peers);
-                    queryPeersRequest.markStopQuery();
-                }
+                callBack.onGetPeers(infohash, peers);
             }
         } else {
             LOGGER.error("invalid getpeers response packet, {}", resp);
@@ -450,7 +461,7 @@ public class DHT {
     }
 
     private void handleAnnouncePeerReq(KRPC krpcPacket, DatagramPacket packet) throws IOException {
-        BencodedMap reqData = krpcPacket.getData();
+        BencodedMap reqData = (BencodedMap) krpcPacket.getData().get(KRPC.QUERY_ARGS);
         BencodedString infohash = (BencodedString) reqData.get(KRPC.INFO_HASH);
 
         Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
@@ -479,5 +490,9 @@ public class DHT {
             queryPeersRequest.markStopQuery();
             queryPeersRequestMap.remove(infohash);
         }
+    }
+
+    public void setCallBack(IDHTCallBack callBack) {
+        this.callBack = callBack;
     }
 }
