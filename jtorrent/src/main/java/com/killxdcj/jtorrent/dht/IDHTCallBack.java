@@ -14,4 +14,5 @@ import java.util.List;
 public interface IDHTCallBack {
     public void onGetPeers(BencodedString infohash, List<Peer> peers);
     public void onGetInfoHash(BencodedString infohash);
+    public void onAnnouncePeer(BencodedString infohash, Peer peer);
 }

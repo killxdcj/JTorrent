@@ -27,7 +27,7 @@ public class DHTConfig {
     private int queryPeersRequestCheckPeriod = 1 * 60 * 1000;
     private int queryPeersRequestMaxAliveTime = 24 * 60 * 60 * 1000;
     private int queryPeersRequestTimeout = 23 * 60 * 60 * 1000;
-    private int queryPeersRequestMaxqueryTimes = 500000;
+    private int queryPeersRequestMaxqueryTimes = 20000;
 
     public int getMessage_max_size() {
         return message_max_size;

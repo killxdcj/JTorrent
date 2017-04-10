@@ -22,25 +22,12 @@ import java.util.*;
  */
 public class Test {
     public static void main(String[] args) {
-//        BencodedMap map = new BencodedMap();
-//        map.put("str", new BencodedString("caojianhua"));
-//        BencodedList list = new BencodedList();
-//        list.add(new BencodedString("曹建华"));
-//        list.add(new BencodedInteger(1000));
-//        map.put("list", list);
-//        map.put("int", new BencodedInteger(1000));
-//        for (byte bt : map.serialize()) {
-//            System.out.print((char) bt);
-//        }
-//
 //        try {
-//            Bencoding bencoding = new Bencoding(map.serialize());
-//            System.out.println("\r\n" + bencoding.decode());
+//            System.out.println(new String(Hex.decodeHex("372e31302e32312e323330".toCharArray())));
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        }
         DHT dht = new DHT(new DHTConfig());
-
         IDHTCallBack callBack = new IDHTCallBack() {
             @Override
             public void onGetPeers(BencodedString infohash, List<Peer> peers) {
@@ -79,6 +66,14 @@ public class Test {
                 System.out.println("get infohash:" + infohash.asHexString());
                 dht.queryPeers(infohash, this);
             }
+
+            @Override
+            public void onAnnouncePeer(BencodedString infohash, Peer peer) {
+                System.out.println("get announce peer:" + infohash.asHexString() + ", peer:" + peer);
+                List<Peer> peers = new ArrayList<>();
+                peers.add(peer);
+                onGetPeers(infohash, peers);
+            }
         };
 
         try {
@@ -97,16 +92,5 @@ public class Test {
             e.printStackTrace();
         }
         dht.shutdown();
-
-//        try {
-//            System.out.println(JTorrentUtils.bytes2long(Hex.decodeHex("d48d".toCharArray())));
-////            Peer peer = new Peer(InetAddress.getByName("192.168.0.1"), 10001);
-////            System.out.println(JTorrentUtils.deCompactPeerInfo(JTorrentUtils.compactPeerInfo(peer)));
-////
-////            Node node = new Node(JTorrentUtils.genNodeId(), InetAddress.getByName("255.0.1.128"), 60001);
-////            System.out.println(JTorrentUtils.deCompactNodeInfos(JTorrentUtils.compactNodeInfo(node)));
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
     }
 }
