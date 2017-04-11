@@ -36,7 +36,7 @@ public class Test {
                         MetadataFetcher fetcher = new MetadataFetcher(peer, infohash, new MetadataFetcher.IFetcherCallback() {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
-                                System.out.println("fetch ok, " + infohash.asHexString() + ",peer:" + peer);
+                                System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
                                 Bencoding bencoding = new Bencoding(metadata);
                                 System.out.println(bencoding.toString());
                                 dht.markPeerGood(infohash, peer);
@@ -44,17 +44,17 @@ public class Test {
 
                             @Override
                             public void onTimeout() {
-                                System.out.println("fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
+                                System.out.println("metadata fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
                             }
 
                             @Override
                             public void onException(Exception e) {
-                                System.out.println("fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
+                                System.out.println("metadata fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
                                 e.printStackTrace();
                             }
                         });
                         new Thread(fetcher).start();
-                        System.out.println("fetch start, " + infohash.asHexString() + ",peer:" + peer);
+                        System.out.println("metadata fetch start, " + infohash.asHexString() + ",peer:" + peer);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -63,13 +63,13 @@ public class Test {
 
             @Override
             public void onGetInfoHash(BencodedString infohash) {
-                System.out.println("get infohash:" + infohash.asHexString());
+                System.out.println("catch infohash:" + infohash.asHexString());
                 dht.queryPeers(infohash, this);
             }
 
             @Override
             public void onAnnouncePeer(BencodedString infohash, Peer peer) {
-                System.out.println("get announce peer:" + infohash.asHexString() + ", peer:" + peer);
+                System.out.println("catch announce peer:" + infohash.asHexString() + ", peer:" + peer);
                 List<Peer> peers = new ArrayList<>();
                 peers.add(peer);
                 onGetPeers(infohash, peers);

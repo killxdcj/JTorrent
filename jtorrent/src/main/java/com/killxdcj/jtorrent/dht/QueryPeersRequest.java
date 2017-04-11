@@ -83,16 +83,4 @@ public class QueryPeersRequest {
     public long aliveTime() {
         return TimeUtils.getElapseTime(startTime, TimeUnit.MILLISECONDS);
     }
-
-    public long getQueryTimes() {
-        return queryTimes;
-    }
-
-    public void setQueryTimes(long queryTimes) {
-        this.queryTimes = queryTimes;
-    }
-
-    public void incrQueryTimes() {
-        queryTimes++;
-    }
 }

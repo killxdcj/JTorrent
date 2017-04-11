@@ -17,6 +17,10 @@ public class TimeUtils {
         return getElapseTime(preTime, TimeUnit.MILLISECONDS);
     }
 
+    public static long getExpiredTime(long expired) {
+        return getCurTime() + expired;
+    }
+
     public static long getElapseTime(long preTime, TimeUnit timeUnit) {
         long duration = System.nanoTime() - preTime;
         switch (timeUnit) {

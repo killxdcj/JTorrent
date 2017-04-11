@@ -41,13 +41,22 @@ public class DHT {
         return t;
     });
     private RoutingTable routingTable = new RoutingTable();
+    private BlacklistManager blacklistManager = new BlacklistManager();
 
     private Map<BencodedString, QueryPeersRequest> queryPeersRequestMap = new ConcurrentHashMap<>();
+    TransactionManager.ITransactionStatsNotify transactionStatsNotify = new TransactionManager.ITransactionStatsNotify() {
+        @Override
+        public void onTransactionExpired(List<Transaction> transactions) {
+            for (Transaction trans : transactions) {
+                blacklistManager.markStain(trans.getNode().getAddr().getHostAddress());
+            }
+        }
+    };
 
     public DHT(DHTConfig config) {
         this.config = config;
         nodeId = JTorrentUtils.genNodeId();
-        transactionManager = new TransactionManager();
+        transactionManager = new TransactionManager(transactionStatsNotify);
     }
 
     public DHT(DHTConfig config, IDHTCallBack callBack) {
@@ -58,6 +67,8 @@ public class DHT {
     }
 
     public void start() throws SocketException {
+        blacklistManager.start();
+        transactionManager.start();
         datagramSocket = new DatagramSocket(config.getPort());
         worker.submit(this::workProc);
         pingPrimeNodes();
@@ -70,6 +81,8 @@ public class DHT {
         startPingCheckSchedule();
         startRoutingTableRebuildSchedule();
         startQueryPeersRequestCheckSchedule();
+        transactionManager.shutdown();
+        blacklistManager.shutdown();
     }
 
     private void startFindNodeSchedule() {
@@ -153,13 +166,13 @@ public class DHT {
                         || queryPeersRequest.ignoreSize() > config.getQueryPeersRequestMaxqueryTimes()) {
                     // TODO notify query timeout if needed
                     queryPeersRequestMap.remove(infohash);
-                    LOGGER.info("query peers over limit, infohash:{}, queryed node:{}",
+                    LOGGER.info("query peers over limit, infohash:{}, queryed times:{}",
                             infohash, queryPeersRequest.ignoreSize());
                 } else if (queryPeersRequest.aliveTime() > config.getQueryPeersRequestMaxAliveTime()) {
                     queryPeersRequest.markStopQuery();
                     LOGGER.info("query peers over maxAlivetime, infohash:{}", infohash);
                 } else {
-                    LOGGER.info("query peers stats, infohash:{}, queryed node:{}, querytimes:{}", infohash.asHexString(), queryPeersRequest.ignoreSize(), queryPeersRequest.getQueryTimes());
+                    LOGGER.info("query peers stats, infohash:{}, queryed times:{}", infohash.asHexString(), queryPeersRequest.ignoreSize());
                 }
             }
 
@@ -206,7 +219,6 @@ public class DHT {
 
         for (Node node : nodes) {
             queryPeersRequest.ignore(node.getId());
-            queryPeersRequest.incrQueryTimes();
             sendGetPeerReq(node, infohash);
         }
 
@@ -221,7 +233,6 @@ public class DHT {
 
         for (Node node : nodes) {
             queryPeersRequest.ignore(node.getId());
-            queryPeersRequest.incrQueryTimes();
             sendGetPeerReq(node, infohash);
         }
         return null;
@@ -265,11 +276,12 @@ public class DHT {
 
     private void workProc() {
         while (!shutdown) {
+            KRPC krpcPacket = null;
             try {
                 DatagramPacket packet = new DatagramPacket(new byte[config.getMessage_max_size()], config.getMessage_max_size());
                 datagramSocket.receive(packet);
                 IBencodedValue value = new Bencoding(packet.getData(), 0, packet.getLength()).decode();
-                KRPC krpcPacket = new KRPC((BencodedMap) value);
+                krpcPacket = new KRPC((BencodedMap) value);
                 krpcPacket.validate();
                 if (krpcPacket.transType() == KRPC.TransType.QUERY) {
                     handleRequest(packet, krpcPacket);
@@ -281,14 +293,15 @@ public class DHT {
                             packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
                 }
             } catch (Exception e) {
-                LOGGER.error("mainproc error, {}", e.getMessage(), e);
+                LOGGER.error("{}, packet:{}", e.getMessage(), krpcPacket);
+                LOGGER.error("", e);
             }
         }
     }
 
     private void handleRequest(DatagramPacket packet, KRPC krpcPacket) throws IOException {
-        LOGGER.info("recv request packet, packet:{}, ip:{}, port:{}",
-                krpcPacket, packet.getAddress().getHostAddress(), packet.getPort());
+        LOGGER.info("recv request packet, id:{}, action:{}, ip:{}, port:{}",
+                krpcPacket.getId(), krpcPacket.action(), packet.getAddress().getHostAddress(), packet.getPort());
         switch (krpcPacket.action()) {
             case PING:
                 handlePingReq(krpcPacket, packet);
@@ -310,12 +323,12 @@ public class DHT {
 
     private void handleResponse(DatagramPacket packet, KRPC krpcPacket) {
         Transaction transaction = transactionManager.getTransaction(krpcPacket.getTransId());
-        LOGGER.info("recv response packet, packet:{}, ip:{}, port:{}",
-                krpcPacket, packet.getAddress().getHostAddress(), packet.getPort());
         if (transaction == null) {
             LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
             return;
         }
+        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
+                krpcPacket.getId(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
 
         switch (transaction.getKrpc().action()) {
             case PING:
@@ -381,7 +394,6 @@ public class DHT {
             for (QueryPeersRequest queryPeersRequest: queryPeersRequestMap.values()) {
                 if (!queryPeersRequest.isIgnore(node.getId())) {
                     queryPeersRequest.ignore(node.getId());
-                    queryPeersRequest.incrQueryTimes();
                     sendGetPeerReq(node, queryPeersRequest.getInfohash());
                 }
             }
@@ -428,7 +440,6 @@ public class DHT {
                 for (Node node : nodes) {
                     if (!queryPeersRequest.isIgnore(node.getId())) {
                         queryPeersRequest.ignore(node.getId());
-                        queryPeersRequest.incrQueryTimes();
                         sendGetPeerReq(node, infohash);
                     }
                 }
@@ -479,7 +490,7 @@ public class DHT {
         KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
         sendKrpcPacket(node, resp);
 
-//        callBack.o
+        callBack.onAnnouncePeer(infohash, peer);
     }
 
     private void handleAnnouncePeerResp(KRPC req, KRPC resp, DatagramPacket packet) {

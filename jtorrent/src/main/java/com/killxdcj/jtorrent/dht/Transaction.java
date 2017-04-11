@@ -1,5 +1,8 @@
 package com.killxdcj.jtorrent.dht;
 
+import com.killxdcj.jtorrent.common.ConfigConsts;
+import com.killxdcj.jtorrent.utils.TimeUtils;
+
 /**
  * Created with IntelliJ IDEA.
  * User: caojianhua
@@ -9,10 +12,12 @@ package com.killxdcj.jtorrent.dht;
 public class Transaction {
     Node node;
     KRPC krpc;
+    long expiredTime;
 
     public Transaction(Node node, KRPC krpc) {
         this.node = node;
         this.krpc = krpc;
+        expiredTime = TimeUtils.getExpiredTime(ConfigConsts.TRANSACTION_VALID_PERIOD);
     }
 
     public Node getNode() {
@@ -29,5 +34,10 @@ public class Transaction {
 
     public void setKrpc(KRPC krpc) {
         this.krpc = krpc;
+    }
+
+    public boolean isExpired() {
+        if (TimeUtils.getCurTime() > expiredTime) return true;
+        return false;
     }
 }
