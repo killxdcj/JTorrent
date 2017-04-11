@@ -280,6 +280,11 @@ public class DHT {
             try {
                 DatagramPacket packet = new DatagramPacket(new byte[config.getMessage_max_size()], config.getMessage_max_size());
                 datagramSocket.receive(packet);
+                if (blacklistManager.isBlocked(packet.getAddress().getHostAddress())) {
+                    LOGGER.info("recv packet from blocked addr, {}", packet.getAddress().getHostAddress());
+                    continue;
+                }
+
                 IBencodedValue value = new Bencoding(packet.getData(), 0, packet.getLength()).decode();
                 krpcPacket = new KRPC((BencodedMap) value);
                 krpcPacket.validate();
@@ -503,6 +508,12 @@ public class DHT {
             queryPeersRequest.markStopQuery();
             queryPeersRequestMap.remove(infohash);
         }
+
+        blacklistManager.markGood(peer.getAddr().getHostAddress());
+    }
+
+    public void markPeerBad(BencodedString infoHash, Peer peer) {
+        blacklistManager.markStain(peer.getAddr().getHostAddress());
     }
 
     public void setCallBack(IDHTCallBack callBack) {

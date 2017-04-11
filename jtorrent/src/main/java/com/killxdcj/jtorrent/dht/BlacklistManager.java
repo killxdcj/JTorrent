@@ -98,6 +98,10 @@ public class BlacklistManager {
         blockedIpTable.put(ip, TimeUtils.getExpiredTime(IP_BLOCK_EXPIRED_TIME));
     }
 
+    public void markGood(String ip) {
+        blockedIpTable.remove(ip);
+    }
+
     public void markStain(String ip) {
         ipStainTable.put(ip, ipStainTable.getOrDefault(ip, 0L) + 1);
     }

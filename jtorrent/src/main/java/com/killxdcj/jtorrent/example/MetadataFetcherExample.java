@@ -1,32 +1,24 @@
-package com.killxdcj.jtorrent.bencoding;
+package com.killxdcj.jtorrent.example;
 
+import com.killxdcj.jtorrent.bencoding.BencodedString;
+import com.killxdcj.jtorrent.bencoding.Bencoding;
 import com.killxdcj.jtorrent.config.DHTConfig;
 import com.killxdcj.jtorrent.dht.DHT;
 import com.killxdcj.jtorrent.dht.IDHTCallBack;
-import com.killxdcj.jtorrent.dht.Node;
 import com.killxdcj.jtorrent.peer.MetadataFetcher;
 import com.killxdcj.jtorrent.peer.Peer;
-import com.killxdcj.jtorrent.utils.JTorrentUtils;
-import org.apache.commons.codec.binary.Hex;
 
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
  * User: caojianhua
- * Date: 2017/04/03
- * Time: 23:23
+ * Date: 2017/04/12
+ * Time: 00:08
  */
-public class Test {
+public class MetadataFetcherExample {
     public static void main(String[] args) {
-//        try {
-//            System.out.println(new String(Hex.decodeHex("372e31302e32312e323330".toCharArray())));
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
         DHT dht = new DHT(new DHTConfig());
         IDHTCallBack callBack = new IDHTCallBack() {
             @Override
@@ -45,11 +37,13 @@ public class Test {
                             @Override
                             public void onTimeout() {
                                 System.out.println("metadata fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
+                                dht.markPeerBad(infohash, peer);
                             }
 
                             @Override
                             public void onException(Exception e) {
                                 System.out.println("metadata fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
+                                dht.markPeerBad(infohash, peer);
                                 e.printStackTrace();
                             }
                         });
