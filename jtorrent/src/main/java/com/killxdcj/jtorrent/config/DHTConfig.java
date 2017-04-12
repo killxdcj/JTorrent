@@ -11,7 +11,7 @@ import java.util.List;
  */
 public class DHTConfig {
     private int message_max_size = 10 * 1024 * 1024;
-    private int port = 9999;
+    private int port = 8888;
     private List<String/* ip:port */> primeNodes = new ArrayList(){{
         add("router.bittorrent.com:6881");
         add("router.utorrent.com:6881");
@@ -21,7 +21,7 @@ public class DHTConfig {
     private int maxNodes = -1;
     private int findNodePeriod =  30 * 1000;
     private int routingTableRebuildPerior = 30 * 60 * 1000;
-    private int nodePingCheckPeriod = 5 * 60 * 1000;
+    private int nodePingCheckPeriod = 60 * 1000;
     private int nodeMaxUnactiveTimeBeforePing = 10 * 60 * 1000;
     private int nodeMaxUnactiveTime = 30 * 60 * 1000;
     private int queryPeersRequestCheckPeriod = 1 * 60 * 1000;

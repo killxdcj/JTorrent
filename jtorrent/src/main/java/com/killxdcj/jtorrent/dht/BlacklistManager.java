@@ -42,6 +42,7 @@ public class BlacklistManager {
     public void start() {
         startBlockedTableBuildSchedule();
         startBlockExpireCheckSchedule();
+        startLogStatsSchedule();
     }
 
     public void shutdown() {
@@ -104,7 +105,7 @@ public class BlacklistManager {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             LOGGER.info("BlockedTableBuildSchedule start");
             long startTime = TimeUtils.getCurTime();
-            LOGGER.info("blacklist stats, blockedIp:{}, blockedSegment:{}, ipStain:{}\r\nblockedSegment list:{}",
+            LOGGER.info("blacklist stats, blockedIp:{}, blockedSegment:{}, ipStain:{}, blockedSegment list:{}",
                     blockedIpTable.size(), blockedNetSegMentTable.size(), ipStainTable.size(), blockedNetSegMentTable.values());
             LOGGER.info("BlockedTableBuildSchedule end, costtime:{}ms", TimeUtils.getElapseTime(startTime));
         }, 0, LOG_STATS_PERIOD, TimeUnit.MILLISECONDS);
@@ -116,6 +117,7 @@ public class BlacklistManager {
 
     public void markGood(String ip) {
         blockedIpTable.remove(ip);
+        ipStainTable.remove(ip);
     }
 
     public void markStain(String ip) {

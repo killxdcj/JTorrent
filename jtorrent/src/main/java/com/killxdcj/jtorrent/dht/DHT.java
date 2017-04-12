@@ -67,6 +67,7 @@ public class DHT {
     }
 
     public void start() throws SocketException {
+        routingTable.start();
         blacklistManager.start();
         transactionManager.start();
         datagramSocket = new DatagramSocket(config.getPort());
@@ -75,12 +76,20 @@ public class DHT {
         startScheduleTask();
     }
 
+    public void shutdown() {
+        shutdown = true;
+        worker.shutdown();
+        scheduledExecutorService.shutdown();
+        datagramSocket.close();
+        routingTable.shutdown();
+        blacklistManager.shutdown();
+        transactionManager.shutdown();
+    }
+
     private void startScheduleTask() {
         startFindNodeSchedule();
         startPingCheckSchedule();
         startQueryPeersRequestCheckSchedule();
-        transactionManager.shutdown();
-        blacklistManager.shutdown();
     }
 
     private void startFindNodeSchedule() {
@@ -130,22 +139,31 @@ public class DHT {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             LOGGER.info("SCHEDULE_QUERY_PEERS_REQUEST_CHECK START");
             long startTime = TimeUtils.getCurTime();
+            List<BencodedString> toRemove = new ArrayList<>();
             for (BencodedString infohash : queryPeersRequestMap.keySet()) {
                 QueryPeersRequest queryPeersRequest = queryPeersRequestMap.get(infohash);
                 if (queryPeersRequest == null) continue;
                 if (queryPeersRequest.aliveTime() > config.getQueryPeersRequestTimeout()
                         || queryPeersRequest.ignoreSize() > config.getQueryPeersRequestMaxqueryTimes()) {
                     // TODO notify query timeout if needed
-                    queryPeersRequestMap.remove(infohash);
+                    toRemove.add(infohash);
                     LOGGER.info("query peers over limit, infohash:{}, queryed times:{}",
                             infohash, queryPeersRequest.ignoreSize());
                 } else if (queryPeersRequest.aliveTime() > config.getQueryPeersRequestMaxAliveTime()) {
                     queryPeersRequest.markStopQuery();
                     LOGGER.info("query peers over maxAlivetime, infohash:{}", infohash);
                 } else {
+                    List<Node> nodes = routingTable.pickNodeRandom();
+                    nodes.forEach(node -> {
+                        if (!queryPeersRequest.isIgnore(node.getId())) {
+                            queryPeersRequest.ignore(node.getId());
+                            sendGetPeerReq(node, infohash);
+                        }
+                    });
                     LOGGER.info("query peers stats, infohash:{}, queryed times:{}", infohash.asHexString(), queryPeersRequest.ignoreSize());
                 }
             }
+            toRemove.forEach(infohash -> queryPeersRequestMap.remove(infohash));
 
             LOGGER.info("SCHEDULE_QUERY_PEERS_REQUEST_CHECK END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
         }, 0, config.getQueryPeersRequestCheckPeriod(), TimeUnit.MILLISECONDS);
@@ -163,13 +181,6 @@ public class DHT {
         }
     }
 
-    public void shutdown() {
-        shutdown = true;
-        worker.shutdown();
-        scheduledExecutorService.shutdown();
-        datagramSocket.close();
-    }
-
     public List<Peer> queryPeers(String infoHashHex) throws DecoderException {
         return queryPeers(new BencodedString(Hex.decodeHex(infoHashHex.toCharArray())));
     }
@@ -183,16 +194,15 @@ public class DHT {
 
         // when routingtable con't fing peer, do this
 //        List<Node> nodes = routingTable.findNodeByInfoHash(infohash);
-        List<Node> nodes = routingTable.getAllNode();
+
         QueryPeersRequest queryPeersRequest = new QueryPeersRequest(infohash);
         queryPeersRequest.ignore(nodeId);
         queryPeersRequestMap.put(infohash, queryPeersRequest);
 
-        for (Node node : nodes) {
+        routingTable.pickNodeRandom().forEach(node -> {
             queryPeersRequest.ignore(node.getId());
             sendGetPeerReq(node, infohash);
-        }
-
+        });
         return null;
     }
 
@@ -366,14 +376,14 @@ public class DHT {
             }
         }
 
-        for (Node node : nodes) {
-            for (QueryPeersRequest queryPeersRequest: queryPeersRequestMap.values()) {
-                if (!queryPeersRequest.isIgnore(node.getId())) {
-                    queryPeersRequest.ignore(node.getId());
-                    sendGetPeerReq(node, queryPeersRequest.getInfohash());
-                }
-            }
-        }
+//        for (Node node : nodes) {
+//            for (QueryPeersRequest queryPeersRequest: queryPeersRequestMap.values()) {
+//                if (!queryPeersRequest.isIgnore(node.getId())) {
+//                    queryPeersRequest.ignore(node.getId());
+//                    sendGetPeerReq(node, queryPeersRequest.getInfohash());
+//                }
+//            }
+//        }
     }
 
     private void handleGetPeersReq(KRPC krpcPacket, DatagramPacket packet) throws IOException {
