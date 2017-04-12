@@ -147,4 +147,8 @@ public class JTorrentUtils {
         }
         return ret;
     }
+
+    public static int nextInt(int bound) {
+        return RANDOM.nextInt(bound);
+    }
 }

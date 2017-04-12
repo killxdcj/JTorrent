@@ -76,10 +76,8 @@ public class DHT {
     }
 
     private void startScheduleTask() {
-        startLogStatsSchedule();
         startFindNodeSchedule();
         startPingCheckSchedule();
-        startRoutingTableRebuildSchedule();
         startQueryPeersRequestCheckSchedule();
         transactionManager.shutdown();
         blacklistManager.shutdown();
@@ -88,32 +86,20 @@ public class DHT {
     private void startFindNodeSchedule() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             LOGGER.info("SCHEDULE_FIND_NODE START");
+            long startTime = TimeUtils.getCurTime();
+
             byte[] randomId = Arrays.copyOf(nodeId.asBytes(), 20);
             byte[] randomIdNext = JTorrentUtils.genByte(10);
             for (int i = 0; i < randomIdNext.length; i++) {
                 randomId[10 + i] = randomIdNext[i];
             }
-            BencodedString xxxx = new BencodedString(randomId);
-            long startTime = TimeUtils.getCurTime();
-            List<Node> nodes = routingTable.findNode(xxxx);
+            BencodedString neighborId = new BencodedString(randomId);
+            List<Node> nodes = routingTable.pickNodeRandom();
             for (Node node : nodes) {
-                sendFindNodeReq(node, xxxx);
+                sendFindNodeReq(node, neighborId);
             }
-            xxx(xxxx);
             LOGGER.info("SCHEDULE_FIND_NODE END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
         }, 5000, config.getFindNodePeriod(), TimeUnit.MILLISECONDS);
-    }
-
-    private void xxx(BencodedString id) {
-        for (String addr : config.getPrimeNodes()) {
-            try {
-                String[] ipPort = addr.split(":");
-                Node node = new Node(InetAddress.getByName(ipPort[0]), Integer.parseInt(ipPort[1]));
-                sendFindNodeReq(node, id);
-            } catch (Exception e) {
-                LOGGER.error("pingPrimeNodes error, node:{}", addr, e);
-            }
-        }
     }
 
     private void startPingCheckSchedule() {
@@ -138,21 +124,6 @@ public class DHT {
             }
             LOGGER.info("SCHEDULE_PING_CHECK END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
         }, 0, config.getNodePingCheckPeriod(), TimeUnit.MILLISECONDS);
-    }
-
-    private void startRoutingTableRebuildSchedule() {
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-
-        }, 0, config.getRoutingTableRebuildPerior(), TimeUnit.MILLISECONDS);
-    }
-
-    private void startLogStatsSchedule() {
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-            LOGGER.info("SCHEDULE_LOG_STATS START");
-            long startTime = TimeUtils.getCurTime();
-            routingTable.state();
-            LOGGER.info("SCHEDULE_LOG_STATS END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
-        }, 0, 60 * 1000, TimeUnit.MILLISECONDS);
     }
 
     private void startQueryPeersRequestCheckSchedule() {

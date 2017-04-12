@@ -2,10 +2,15 @@ package com.killxdcj.jtorrent.dht;
 
 import com.killxdcj.jtorrent.bencoding.BencodedString;
 import com.killxdcj.jtorrent.peer.Peer;
+import com.killxdcj.jtorrent.utils.JTorrentUtils;
+import com.killxdcj.jtorrent.utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -17,8 +22,16 @@ import java.util.stream.Collectors;
 public class RoutingTable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RoutingTable.class);
 
+    private static final long LOG_STATS_PERIOD = 60 * 1000;
+    private static final long REBUILD_PERIOD = 60 * 1000;
+
     private Buckets[] bucketss = {new Buckets()};
     private Set<BencodedString> nodeIds = new HashSet<>();
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(5, r -> {
+        Thread t = new Thread(r, "RoutingTable schedule");
+        t.setDaemon(true);
+        return t;
+    });
 
     public RoutingTable() {
     }
@@ -27,12 +40,25 @@ public class RoutingTable {
         this.bucketss = bucketss;
     }
 
+    public void start() {
+        scheduledExecutorService.scheduleAtFixedRate(this::logStats,0, LOG_STATS_PERIOD, TimeUnit.MILLISECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(this::rebuild, 0, REBUILD_PERIOD, TimeUnit.MILLISECONDS);
+    }
+
+    public void shutdown() {
+        scheduledExecutorService.shutdown();
+    }
+
     synchronized public List<Node> findNode(BencodedString nodeId) {
         return bucketss[queryBuckets(nodeId)].getAllNode();
     }
 
     synchronized public List<Node> findNodeByInfoHash(BencodedString infoHash) {
         return bucketss[queryBuckets(infoHash)].getAllNode();
+    }
+
+    synchronized public List<Node> pickNodeRandom() {
+        return bucketss[JTorrentUtils.nextInt(bucketss.length)].getAllNode();
     }
 
     public List<Peer> findPeerByInfoHash(BencodedString infoHash) {
@@ -142,19 +168,45 @@ public class RoutingTable {
         return nodes;
     }
 
-    synchronized public void state() {
+    synchronized private void logStats() {
+        LOGGER.info("RoutingTable logStats start");
+        long startTime = TimeUtils.getCurTime();
         int total = 0;
         int notEmpty = 0;
-        StringBuilder sb = new StringBuilder();
         for (Buckets buckets : bucketss) {
             if (buckets.size() != 0) {
-                sb.append(buckets.getId().asHexString()).append("  -   ").append(buckets.size()).append("\r\n");
                 notEmpty++;
                 total += buckets.size();
             }
         }
-        LOGGER.info("routing table stats, totalBckets:{}, notEmpty:{}, totalNodes:{}", bucketss.length, notEmpty, total);
-//        LOGGER.info(sb.toString());
+        LOGGER.info("routing table stats, totalBckets:{}, notEmpty:{}, totalNodes:{}, costtime:{}ms",
+                bucketss.length, notEmpty, total, TimeUtils.getElapseTime(startTime));
     }
+
+    synchronized private void rebuild() {
+        LOGGER.info("RoutingTable rebuild start");
+        long startTime = TimeUtils.getCurTime();
+
+        int total = 0;
+        int notEmpty = 0;
+        for (Buckets buckets : bucketss) {
+            if (buckets.size() != 0) {
+                notEmpty++;
+                total += buckets.size();
+            }
+        }
+
+        if (total > 100 && ((double) notEmpty / bucketss.length) < 0.8 ) {
+            Buckets[] bucketssOld = bucketss;
+            bucketss = new Buckets[1];
+            bucketss[0] = new Buckets();
+
+            for (Buckets buckets : bucketssOld) {
+                buckets.getAllNode().forEach(node -> putNode(node));
+            }
+        }
+        LOGGER.info("RoutingTable rebuild end, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+    }
+
     // TODO every 1 hour rebuild routetable
 }
