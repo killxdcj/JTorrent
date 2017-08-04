@@ -14,16 +14,20 @@
             </Policies>
             <DefaultRolloverStrategy max="10" />
         </RollingFile>
+        <RollingFile name="INFO_HASH" fileName="./logs/infohash.log"
+                     filePattern="./logs/infohash_%d{yyyy-MM-dd}_%i.log">
+            <PatternLayout pattern="%d %m%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true"
+                                           interval="24" />
+                <!--<SizeBasedTriggeringPolicy size="128KB" />-->
+            </Policies>
+            <DefaultRolloverStrategy max="10" />
+        </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="com.opensymphony.xwork2" level="trace">
-            <AppenderRef ref="jtorrent" />
-        </Logger>
-        <Logger name="org.apache.struts2" level="debug">
-            <AppenderRef ref="jtorrent" />
-        </Logger>
-        <Logger name="org.hibernate" level="debug">
-            <AppenderRef ref="jtorrent"></AppenderRef>
+        <Logger name="INFO_HASH" level="debug">
+            <AppenderRef ref="INFO_HASH"></AppenderRef>
         </Logger>
         <Root level="info">
             <!--<AppenderRef ref="STDOUT_ROOT" />-->
