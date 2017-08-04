@@ -232,7 +232,7 @@ public class MetadataFetcher extends Peer implements Runnable {
     private ByteBuffer buildPacket(byte extendedId, byte[] payload) {
         int length = 4 + 2 + payload.length;
         ByteBuffer ret = ByteBuffer.allocate(length);
-        ret.putInt(length);
+        ret.putInt(2 + payload.length);
         ret.put(EXTENDED);
         ret.put(extendedId);
         ret.put(payload);
