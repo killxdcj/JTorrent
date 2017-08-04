@@ -97,6 +97,12 @@ public class DHT {
             LOGGER.info("SCHEDULE_FIND_NODE START");
             long startTime = TimeUtils.getCurTime();
 
+            int size = routingTable.getAllNode().size();
+            if (size > 1000) {
+                LOGGER.info("SCHEDULE_FIND_NODE END, routingTable size > {}, costtime:{}ms", size, TimeUtils.getElapseTime(startTime));
+                return;
+            }
+
             byte[] randomId = Arrays.copyOf(nodeId.asBytes(), 20);
             byte[] randomIdNext = JTorrentUtils.genByte(10);
             for (int i = 0; i < randomIdNext.length; i++) {

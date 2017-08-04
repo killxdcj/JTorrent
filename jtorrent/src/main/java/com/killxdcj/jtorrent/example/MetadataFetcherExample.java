@@ -9,7 +9,9 @@ import com.killxdcj.jtorrent.peer.MetadataFetcher;
 import com.killxdcj.jtorrent.peer.Peer;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -20,6 +22,7 @@ import java.util.List;
 public class MetadataFetcherExample {
     public static void main(String[] args) {
         DHT dht = new DHT(new DHTConfig());
+        Set<BencodedString> fetchedHash = new HashSet<>();
         IDHTCallBack callBack = new IDHTCallBack() {
             @Override
             public void onGetPeers(BencodedString infohash, List<Peer> peers) {
@@ -28,10 +31,18 @@ public class MetadataFetcherExample {
                         MetadataFetcher fetcher = new MetadataFetcher(peer, infohash, new MetadataFetcher.IFetcherCallback() {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
-                                System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
-                                Bencoding bencoding = new Bencoding(metadata);
-                                System.out.println(bencoding.toString());
-                                dht.markPeerGood(infohash, peer);
+                                if (!fetchedHash.contains(infohash)) {
+//                                    System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
+                                    Bencoding bencoding = new Bencoding(metadata);
+                                    try {
+                                        System.out.println(infohash.asHexString() + ":" + bencoding.decode().asMap().get("name").asString());
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    dht.markPeerGood(infohash, peer);
+                                }
+
+                                fetchedHash.add(infohash);
                             }
 
                             @Override
@@ -64,9 +75,11 @@ public class MetadataFetcherExample {
             @Override
             public void onAnnouncePeer(BencodedString infohash, Peer peer) {
                 System.out.println("catch announce peer:" + infohash.asHexString() + ", peer:" + peer);
-                List<Peer> peers = new ArrayList<>();
-                peers.add(peer);
-                onGetPeers(infohash, peers);
+                if (!fetchedHash.contains(infohash)) {
+                    List<Peer> peers = new ArrayList<>();
+                    peers.add(peer);
+                    onGetPeers(infohash, peers);
+                }
             }
         };
 
