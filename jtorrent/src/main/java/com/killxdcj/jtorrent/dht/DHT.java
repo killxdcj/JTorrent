@@ -517,12 +517,12 @@ public class DHT {
 //        routingTable.putNode(node);
 
         Peer peer = new Peer(packet.getAddress(), packet.getPort());
-        callBack.onAnnouncePeer(infohash, peer);
+        callBack.onAnnouncePeer(infohash, peer, "xx");
 
         int port = reqData.get(KRPC.PORT).asLong().intValue();
         if (port > 0 && port < 65536) {
             peer = new Peer(packet.getAddress(), port);
-            callBack.onAnnouncePeer(infohash, peer);
+            callBack.onAnnouncePeer(infohash, peer, "xx");
         }
 
 //        if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
