@@ -32,7 +32,7 @@ public class MetadataFetcherExample {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
 //                                if (!fetchedHash.contains(infohash)) {
-//                                    System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
+                                    System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
                                     Bencoding bencoding = new Bencoding(metadata);
                                     try {
                                         System.out.println(infohash.asHexString() + ":" + bencoding.decode().asMap().get("name").asString());
