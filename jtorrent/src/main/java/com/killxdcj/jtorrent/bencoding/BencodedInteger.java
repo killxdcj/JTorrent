@@ -55,4 +55,9 @@ public class BencodedInteger extends AbstractBencodedValue {
     public int hashCode() {
         return (int) (data ^ (data >>> 32));
     }
+
+    @Override
+    public Object toHuman() {
+        return "" + data;
+    }
 }

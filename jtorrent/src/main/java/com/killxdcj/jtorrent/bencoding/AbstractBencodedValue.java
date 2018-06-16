@@ -50,4 +50,9 @@ public abstract class AbstractBencodedValue implements IBencodedValue {
     public Map<String, IBencodedValue> asMap() {
         throw new UnsupportedOperationException("Bencoded value cannot be converted to map");
     }
+
+    @Override
+    public Object toHuman() {
+        throw new UnsupportedOperationException("Bencoded value cannot be converted to map");
+    }
 }

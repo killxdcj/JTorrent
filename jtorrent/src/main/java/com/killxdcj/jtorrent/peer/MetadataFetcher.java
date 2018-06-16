@@ -26,7 +26,7 @@ import java.util.*;
 public class MetadataFetcher extends Peer implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MetadataFetcher.class);
 
-    private static final int DEFAULT_FETCH_TIMEOUT = 2 * 60 * 1000;
+    private static final int DEFAULT_FETCH_TIMEOUT = 5 * 60 * 1000;
     private static final int DEFAULT_CONNECT_CHECK_PERIOD = 500;
     private static final byte EXTENDED = (byte) 20;
     private static final byte HANDSHAKE = (byte) 0;
@@ -41,7 +41,7 @@ public class MetadataFetcher extends Peer implements Runnable {
     private int fetchTimeout = DEFAULT_FETCH_TIMEOUT;
     private SocketChannel cliChannel;
     private BencodedString peerId;
-    private boolean finshed = false;
+    private volatile boolean finshed = false;
 
     private byte remoteUtMetadataId;
     private int meatadataSize;

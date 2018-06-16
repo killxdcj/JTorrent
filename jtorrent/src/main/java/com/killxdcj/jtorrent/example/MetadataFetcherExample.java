@@ -1,5 +1,6 @@
 package com.killxdcj.jtorrent.example;
 
+import com.alibaba.fastjson.JSON;
 import com.killxdcj.jtorrent.bencoding.BencodedString;
 import com.killxdcj.jtorrent.bencoding.Bencoding;
 import com.killxdcj.jtorrent.config.DHTConfig;
@@ -36,11 +37,11 @@ public class MetadataFetcherExample {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
 //                                if (!fetchedHash.contains(infohash)) {
-                                    System.out.println(MetadataFetcherExample.timex() + "metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
                                     Bencoding bencoding = new Bencoding(metadata);
                                     try {
-                                        System.out.println(infohash.asHexString() + ":" + bencoding.decode().asMap().get("name").asString());
+                                        System.out.println(MetadataFetcherExample.timex() + "meta geted, " + infohash.asHexString() + ":" + JSON.toJSONString(bencoding.decode().toHuman()));
                                     } catch (Exception e) {
+                                        System.out.println(MetadataFetcherExample.timex() + "metadata fetch ok, but parse failed" + infohash.asHexString() + ",peer:" + peer);
                                         e.printStackTrace();
                                     }
 //                                    dht.markPeerGood(infohash, peer);

@@ -76,4 +76,13 @@ public class BencodedList extends AbstractBencodedValue {
     public int hashCode() {
         return datas != null ? datas.hashCode() : 0;
     }
+
+    @Override
+    public Object toHuman() {
+        List<Object> ret = new ArrayList<>();
+        for (IBencodedValue v : datas) {
+            ret.add(v.toHuman());
+        }
+        return ret;
+    }
 }

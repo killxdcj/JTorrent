@@ -82,4 +82,13 @@ public class BencodedMap extends AbstractBencodedValue {
     public int hashCode() {
         return data != null ? data.hashCode() : 0;
     }
+
+    @Override
+    public Object toHuman() {
+        Map<String, Object> ret = new HashMap<>();
+        for (Map.Entry<String, IBencodedValue> entry : data.entrySet()) {
+            ret.put(entry.getKey(), entry.getValue().toHuman());
+        }
+        return ret;
+    }
 }

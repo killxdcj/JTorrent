@@ -107,4 +107,9 @@ public class BencodedString extends AbstractBencodedValue implements Comparable 
 
         return true;
     }
+
+    @Override
+    public Object toHuman() {
+        return asString();
+    }
 }

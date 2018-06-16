@@ -16,4 +16,5 @@ public interface IBencodedValue {
     List<IBencodedValue> asList();
     Map<String, IBencodedValue> asMap();
     byte[] serialize();
+    Object toHuman();
 }

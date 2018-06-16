@@ -1,9 +1,12 @@
 package com.killxdcj.jtorrent.peer;
 
 import com.killxdcj.jtorrent.bencoding.BencodedString;
+import com.killxdcj.jtorrent.bencoding.Bencoding;
+import com.killxdcj.jtorrent.bencoding.IBencodedValue;
 import org.apache.commons.codec.binary.Hex;
 
 import java.net.InetAddress;
+import java.util.Arrays;
 
 /**
  * Created with IntelliJ IDEA.
@@ -14,10 +17,21 @@ import java.net.InetAddress;
 public class FetcherTest {
     public static void main(String[] args) {
         try {
-            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("111.167.156.226"), 8208, new BencodedString(Hex.decodeHex("1e92b495401898b91819bb19325438df51410aba".toCharArray())), new MetadataFetcher.IFetcherCallback() {
+            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("101.242.123.246"), 10795, new BencodedString(Hex.decodeHex("558a69dcf1831a434ec2d311157e0c19df7be7be".toCharArray())), new MetadataFetcher.IFetcherCallback() {
                 @Override
                 public void onFinshed(BencodedString infohash, byte[] metadata) {
                     System.out.println("ok");
+                    String xx = "";
+                    for (byte x : metadata) {
+                        xx += (char)x;
+                    }
+                    System.out.println(xx);
+                    try {
+                        IBencodedValue x = (new Bencoding(metadata)).decode();
+                        System.out.println(x.toString());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 @Override
