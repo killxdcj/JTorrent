@@ -14,7 +14,7 @@ import java.net.InetAddress;
 public class FetcherTest {
     public static void main(String[] args) {
         try {
-            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("175.149.220.141"), 7891, new BencodedString(Hex.decodeHex("c83d68b386af249a4412bc4f68ec2efb2149398e".toCharArray())), new MetadataFetcher.IFetcherCallback() {
+            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("111.167.156.226"), 8208, new BencodedString(Hex.decodeHex("1e92b495401898b91819bb19325438df51410aba".toCharArray())), new MetadataFetcher.IFetcherCallback() {
                 @Override
                 public void onFinshed(BencodedString infohash, byte[] metadata) {
                     System.out.println("ok");

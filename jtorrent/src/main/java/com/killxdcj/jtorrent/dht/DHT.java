@@ -96,11 +96,10 @@ public class DHT {
 
     private void startFindNodeScheduleHack() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            LOGGER.info("SCHEDULE_FIND_NODE START");
+//            LOGGER.info("SCHEDULE_FIND_NODE START");
             long startTime = TimeUtils.getCurTime();
 
             List<Node> allNodes = hackNodesManager.getAllNode();
-            LOGGER.info("allnodes sieze {}", allNodes.size());
 
             byte[] randomId = Arrays.copyOf(nodeId.asBytes(), 20);
             byte[] randomIdNext = JTorrentUtils.genByte(10);
@@ -124,7 +123,7 @@ public class DHT {
             for (Node node : allNodes) {
                 sendFindNodeReq(node, neighborId);
             }
-            LOGGER.info("SCHEDULE_FIND_NODE END, costtime:{}ms", TimeUtils.getElapseTime(startTime));
+            LOGGER.info("SCHEDULE_FIND_NODE END, node:{}, costtime:{}ms", allNodes.size(), TimeUtils.getElapseTime(startTime));
         }, 5000, config.getFindNodePeriod(), TimeUnit.MILLISECONDS);
     }
 
@@ -417,7 +416,9 @@ public class DHT {
 //            if (!routingTable.contains(node.getId())) {
 //                sendPingReq(node);
 //            }
-            hackNodesManager.putNode(node);
+            if (node.port != 0) {
+                hackNodesManager.putNode(node);
+            }
         }
 
 //        for (Node node : nodes) {
@@ -436,7 +437,7 @@ public class DHT {
 
         BencodedMap reqArgs = (BencodedMap) krpcPacket.getData().get(KRPC.QUERY_ARGS);
         BencodedString infohash = (BencodedString) reqArgs.get(KRPC.INFO_HASH);
-//        callBack.onGetInfoHash(infohash);
+        callBack.onGetInfoHash(infohash);
 //
 //        // TODO notify an download
 //        LOGGER.info("get getpeers request, infohash:{}", infohash.asHexString());
@@ -457,7 +458,7 @@ public class DHT {
         }
         KRPC resp = KRPC.buildGetPeersRespPacketWithPeers(krpcPacket.getTransId(), nodeId, "caojian", peers);
         sendKrpcPacket(node, resp);
-        LOGGER.info("get info : {}", infohash.asHexString());
+//        LOGGER.info("get info : {}", infohash.asHexString());
     }
 
     private void handleGetPeersResp(KRPC req, KRPC resp, DatagramPacket packet) {
@@ -522,12 +523,12 @@ public class DHT {
         Peer peer = new Peer(packet.getAddress(), port);
 //        routingTable.putPeer(infohash, peer);
 
-        LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
+//        LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
 
         KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
         sendKrpcPacket(node, resp);
 
-//        callBack.onAnnouncePeer(infohash, peer);
+        callBack.onAnnouncePeer(infohash, peer);
     }
 
     private void handleAnnouncePeerResp(KRPC req, KRPC resp, DatagramPacket packet) {

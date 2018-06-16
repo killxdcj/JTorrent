@@ -47,6 +47,7 @@ public class MetadataFetcher extends Peer implements Runnable {
     private int meatadataSize;
     private int pieceTotal;
     private Map<Integer, byte[]> metadata = new HashMap<>();
+    private volatile boolean exit = false;
 
     private static final byte[] handshakePrefix = buildHandshakePacketPrefix();
 
@@ -76,9 +77,7 @@ public class MetadataFetcher extends Peer implements Runnable {
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    iFetcherCallback.onTimeout();
-                    finshed = true;
-                    closeCliChannel();
+                    timeOutxx();
                 }
             }, DEFAULT_FETCH_TIMEOUT);
 
@@ -117,6 +116,7 @@ public class MetadataFetcher extends Peer implements Runnable {
             return;
         } finally {
             closeCliChannel();
+            exit = true;
         }
     }
 
@@ -291,8 +291,17 @@ public class MetadataFetcher extends Peer implements Runnable {
             try {
                 cliChannel.close();
             } catch (IOException e) {
-                LOGGER.error("close clichannel error", e);
+//                LOGGER.error("close clichannel error", e);
             }
+        }
+    }
+
+    public void timeOutxx() {
+        if (!exit) {
+            exit = true;
+            iFetcherCallback.onTimeout();
+            finshed = true;
+            closeCliChannel();
         }
     }
 }

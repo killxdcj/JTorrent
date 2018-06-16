@@ -31,7 +31,7 @@ public class MetadataFetcherExample {
                         MetadataFetcher fetcher = new MetadataFetcher(peer, infohash, new MetadataFetcher.IFetcherCallback() {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
-                                if (!fetchedHash.contains(infohash)) {
+//                                if (!fetchedHash.contains(infohash)) {
 //                                    System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
                                     Bencoding bencoding = new Bencoding(metadata);
                                     try {
@@ -39,22 +39,22 @@ public class MetadataFetcherExample {
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
-                                    dht.markPeerGood(infohash, peer);
-                                }
+//                                    dht.markPeerGood(infohash, peer);
+//                                }
 
-                                fetchedHash.add(infohash);
+//                                fetchedHash.add(infohash);
                             }
 
                             @Override
                             public void onTimeout() {
                                 System.out.println("metadata fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
-                                dht.markPeerBad(infohash, peer);
+//                                dht.markPeerBad(infohash, peer);
                             }
 
                             @Override
                             public void onException(Exception e) {
                                 System.out.println("metadata fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
-                                dht.markPeerBad(infohash, peer);
+//                                dht.markPeerBad(infohash, peer);
                                 e.printStackTrace();
                             }
                         });
@@ -69,17 +69,20 @@ public class MetadataFetcherExample {
             @Override
             public void onGetInfoHash(BencodedString infohash) {
                 System.out.println("catch infohash:" + infohash.asHexString());
-                dht.queryPeers(infohash, this);
+//                dht.queryPeers(infohash, this);
             }
 
             @Override
             public void onAnnouncePeer(BencodedString infohash, Peer peer) {
-                System.out.println("catch announce peer:" + infohash.asHexString() + ", peer:" + peer);
-                if (!fetchedHash.contains(infohash)) {
-                    List<Peer> peers = new ArrayList<>();
-                    peers.add(peer);
-                    onGetPeers(infohash, peers);
-                }
+//                System.out.println("catch announce peer:" + infohash.asHexString() + ", peer:" + peer);
+                List<Peer> peers = new ArrayList<>();
+                peers.add(peer);
+                onGetPeers(infohash, peers);
+//                if (!fetchedHash.contains(infohash)) {
+//                    List<Peer> peers = new ArrayList<>();
+//                    peers.add(peer);
+//                    onGetPeers(infohash, peers);
+//                }
             }
         };
 
