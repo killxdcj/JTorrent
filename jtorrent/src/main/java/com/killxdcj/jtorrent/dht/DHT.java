@@ -538,7 +538,7 @@ public class DHT {
         KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
         sendKrpcPacket(node, resp);
 
-//        callBack.onAnnouncePeer(infohash, peer);
+        callBack.onAnnouncePeer(infohash, peer, "xx");
     }
 
     private void handleAnnouncePeerResp(KRPC req, KRPC resp, DatagramPacket packet) {
