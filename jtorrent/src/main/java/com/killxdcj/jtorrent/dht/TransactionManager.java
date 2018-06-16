@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class TransactionManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TransactionManager.class);
 
-    private static final int TRANSACTION_EXPIRED_CHECK_PERIOD = 60 * 1000;
+    private static final int TRANSACTION_EXPIRED_CHECK_PERIOD = 5 * 60 * 1000;
 
     private ITransactionStatsNotify notify;
     private Map<BencodedString, Transaction> transactionTable = new ConcurrentHashMap<>();
