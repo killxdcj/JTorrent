@@ -329,8 +329,8 @@ public class DHT {
     }
 
     private void handleRequest(DatagramPacket packet, KRPC krpcPacket) throws IOException {
-        LOGGER.info("recv request packet, id:{}, action:{}, ip:{}, port:{}",
-                krpcPacket.getId(), krpcPacket.action(), packet.getAddress().getHostAddress(), packet.getPort());
+//        LOGGER.info("recv request packet, id:{}, action:{}, ip:{}, port:{}",
+//                krpcPacket.getId(), krpcPacket.action(), packet.getAddress().getHostAddress(), packet.getPort());
         switch (krpcPacket.action()) {
             case PING:
 //                handlePingReq(krpcPacket, packet);
@@ -356,8 +356,8 @@ public class DHT {
             LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
             return;
         }
-        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
-                krpcPacket.getId(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
+//        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
+//                krpcPacket.getId(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
 
         switch (transaction.getKrpc().action()) {
             case PING:
