@@ -11,7 +11,7 @@ import java.util.List;
  */
 public class DHTConfig {
     private int message_max_size = 10 * 1024 * 1024;
-    private int port = 8888;
+    private int port = 9713;
     private List<String/* ip:port */> primeNodes = new ArrayList(){{
         add("router.bittorrent.com:6881");
         add("router.utorrent.com:6881");
