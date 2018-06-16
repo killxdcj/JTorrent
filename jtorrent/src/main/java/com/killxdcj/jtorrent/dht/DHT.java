@@ -525,7 +525,7 @@ public class DHT {
 //            callBack.onAnnouncePeer(infohash, peer, "xx");
 //        }
 
-        int port = packet.getPort();
+        int port = reqData.get(KRPC.PORT).asLong().intValue();
         if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
             port = packet.getPort();
         }

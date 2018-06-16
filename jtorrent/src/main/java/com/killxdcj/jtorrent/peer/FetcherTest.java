@@ -17,7 +17,7 @@ import java.util.Arrays;
 public class FetcherTest {
     public static void main(String[] args) {
         try {
-            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("101.242.123.246"), 10795, new BencodedString(Hex.decodeHex("558a69dcf1831a434ec2d311157e0c19df7be7be".toCharArray())), new MetadataFetcher.IFetcherCallback() {
+            MetadataFetcher fetcher = new MetadataFetcher(InetAddress.getByName("112.99.69.48"), 34744, new BencodedString(Hex.decodeHex("ff325954c779a50b9db92a3134da40029d4589e9".toCharArray())), new MetadataFetcher.IFetcherCallback() {
                 @Override
                 public void onFinshed(BencodedString infohash, byte[] metadata) {
                     System.out.println("ok");
