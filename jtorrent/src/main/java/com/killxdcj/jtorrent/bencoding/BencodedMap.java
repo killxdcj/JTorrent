@@ -91,6 +91,7 @@ public class BencodedMap extends AbstractBencodedValue {
 //                ret.put(entry.getKey(), ((BencodedString)entry.getValue()).asHexString());
                 ret.put(entry.getKey(), "pieces and ignore");
             } else {
+                System.out.println("not pieces :" + entry.getKey());
                 ret.put(entry.getKey(), entry.getValue().toHuman());
             }
         }
