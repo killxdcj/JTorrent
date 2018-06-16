@@ -105,7 +105,7 @@ public class DHT {
             byte[] randomId = Arrays.copyOf(nodeId.asBytes(), 20);
             byte[] randomIdNext = JTorrentUtils.genByte(10);
             for (int i = 0; i < randomIdNext.length; i++) {
-                randomId[10 + i] = randomIdNext[i];
+                randomId[i] = randomIdNext[i];
             }
             BencodedString neighborId = new BencodedString(randomId);
 
@@ -322,8 +322,8 @@ public class DHT {
                             packet.getAddress().getHostAddress(), packet.getPort(), krpcPacket);
                 }
             } catch (Exception e) {
-                LOGGER.error("{}, packet:{}", e.getMessage(), krpcPacket);
-                LOGGER.error("", e);
+//                LOGGER.error("{}, packet:{}", e.getMessage(), krpcPacket);
+//                LOGGER.error("", e);
             }
         }
     }
@@ -434,8 +434,8 @@ public class DHT {
         Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
 //        routingTable.putNode(node);
 
-//        BencodedMap reqArgs = (BencodedMap) krpcPacket.getData().get(KRPC.QUERY_ARGS);
-//        BencodedString infohash = (BencodedString) reqArgs.get(KRPC.INFO_HASH);
+        BencodedMap reqArgs = (BencodedMap) krpcPacket.getData().get(KRPC.QUERY_ARGS);
+        BencodedString infohash = (BencodedString) reqArgs.get(KRPC.INFO_HASH);
 //        callBack.onGetInfoHash(infohash);
 //
 //        // TODO notify an download
@@ -450,8 +450,14 @@ public class DHT {
 //            List<Node> nodes = routingTable.findNodeByInfoHash(infohash);
 //            resp = KRPC.buildGetPeersRespPacketWithNodes(krpcPacket.getTransId(), nodeId, "caojian", nodes);
 //        }
-        KRPC resp = KRPC.buildGetPeersRespPacketWithPeers(krpcPacket.getTransId(), nodeId, "caojian", Collections.emptyList());
+        List<Node> nodes = hackNodesManager.getPeers();
+        List<Peer> peers = new ArrayList<>();
+        for (Node nodex : nodes) {
+            peers.add(new Peer(nodex.getAddr(), node.getPort()));
+        }
+        KRPC resp = KRPC.buildGetPeersRespPacketWithPeers(krpcPacket.getTransId(), nodeId, "caojian", peers);
         sendKrpcPacket(node, resp);
+        LOGGER.info("get info : {}", infohash.asHexString());
     }
 
     private void handleGetPeersResp(KRPC req, KRPC resp, DatagramPacket packet) {
@@ -507,14 +513,14 @@ public class DHT {
         BencodedString infohash = (BencodedString) reqData.get(KRPC.INFO_HASH);
 
         Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
-        routingTable.putNode(node);
+//        routingTable.putNode(node);
 
         int port = reqData.get(KRPC.PORT).asLong().intValue();
         if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
             port = packet.getPort();
         }
         Peer peer = new Peer(packet.getAddress(), port);
-        routingTable.putPeer(infohash, peer);
+//        routingTable.putPeer(infohash, peer);
 
         LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
 

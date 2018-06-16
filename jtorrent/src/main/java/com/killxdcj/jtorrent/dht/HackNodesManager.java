@@ -18,4 +18,13 @@ public class HackNodesManager {
 		}
 		allNode.add(node);
 	}
+
+	public List<Node> getPeers() {
+		int size = allNode.size();
+		if (size > 5) {
+			return allNode.subList(0, 5);
+		} else {
+			return allNode.subList(0, size);
+		}
+	}
 }
