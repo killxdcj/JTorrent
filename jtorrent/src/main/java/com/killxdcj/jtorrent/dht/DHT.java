@@ -525,15 +525,19 @@ public class DHT {
 //            callBack.onAnnouncePeer(infohash, peer, "xx");
 //        }
 
+        boolean useUdpPort = false;
         int port = reqData.get(KRPC.PORT).asLong().intValue();
+        int xport = port;
         if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
             port = packet.getPort();
+            useUdpPort = true;
         }
         Peer peer = new Peer(packet.getAddress(), port);
 
         routingTable.putPeer(infohash, peer);
 
-        LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
+        LOGGER.info("get announcepeer request, infohash:{}, peer:{}, useUdpPort:{}, rpcPort:{}, udpPort:{}",
+                infohash, peer, useUdpPort, xport, packet.getPort());
 
         KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
         sendKrpcPacket(node, resp);
