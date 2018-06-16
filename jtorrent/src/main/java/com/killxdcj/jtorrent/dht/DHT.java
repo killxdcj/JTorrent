@@ -108,6 +108,19 @@ public class DHT {
                 randomId[10 + i] = randomIdNext[i];
             }
             BencodedString neighborId = new BencodedString(randomId);
+
+            if (allNodes.size() == 0) {
+                for (String addr : config.getPrimeNodes()) {
+                    try {
+                        String[] ipPort = addr.split(":");
+                        Node node = new Node(InetAddress.getByName(ipPort[0]), Integer.parseInt(ipPort[1]));
+                        sendFindNodeReq(node, neighborId);
+                    } catch (Exception e) {
+                        LOGGER.error("pingPrimeNodes error, node:{}", addr, e);
+                    }
+                }
+            }
+
             for (Node node : allNodes) {
                 sendFindNodeReq(node, neighborId);
             }
@@ -199,6 +212,7 @@ public class DHT {
     }
 
     private void pingPrimeNodes() {
+        LOGGER.info("pingPrimeNodes");
         for (String addr : config.getPrimeNodes()) {
             try {
                 String[] ipPort = addr.split(":");
@@ -342,8 +356,8 @@ public class DHT {
             LOGGER.warn("unknow tranaction, maybe because timeout, packet:{}", krpcPacket);
             return;
         }
-//        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
-//                krpcPacket.getId(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
+        LOGGER.info("recv response packet, id:{}, action:{}, ip:{}, port:{}",
+                krpcPacket.getId(), transaction.getKrpc().action(), packet.getAddress().getHostAddress(), packet.getPort());
 
         switch (transaction.getKrpc().action()) {
             case PING:
