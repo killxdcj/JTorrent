@@ -110,10 +110,13 @@ public class MetadataFetcher extends Peer implements Runnable {
                 dealPacket(transPacket);
             }
         } catch (Exception e) {
-            iFetcherCallback.onException(e);
-            LOGGER.error("fetch etadata error, infohash:{}, ip:{}, port:{}", infohash, addr, port);
-            LOGGER.error(e.getMessage(), e);
-            return;
+            if (!exit) {
+                exit = true;
+                iFetcherCallback.onException(e);
+                LOGGER.error("fetch etadata error, infohash:{}, ip:{}, port:{}", infohash, addr, port);
+                LOGGER.error(e.getMessage(), e);
+                return;
+            }
         } finally {
             closeCliChannel();
             exit = true;

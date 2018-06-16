@@ -8,10 +8,8 @@ import com.killxdcj.jtorrent.dht.IDHTCallBack;
 import com.killxdcj.jtorrent.peer.MetadataFetcher;
 import com.killxdcj.jtorrent.peer.Peer;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -20,6 +18,12 @@ import java.util.Set;
  * Time: 00:08
  */
 public class MetadataFetcherExample {
+
+    public static String timex() {
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return fmt.format(new Date()) + " ";
+    }
+
     public static void main(String[] args) {
         DHT dht = new DHT(new DHTConfig());
         Set<BencodedString> fetchedHash = new HashSet<>();
@@ -32,7 +36,7 @@ public class MetadataFetcherExample {
                             @Override
                             public void onFinshed(BencodedString infohash, byte[] metadata) {
 //                                if (!fetchedHash.contains(infohash)) {
-                                    System.out.println("metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
+                                    System.out.println(MetadataFetcherExample.timex() + "metadata fetch ok, " + infohash.asHexString() + ",peer:" + peer);
                                     Bencoding bencoding = new Bencoding(metadata);
                                     try {
                                         System.out.println(infohash.asHexString() + ":" + bencoding.decode().asMap().get("name").asString());
@@ -47,19 +51,19 @@ public class MetadataFetcherExample {
 
                             @Override
                             public void onTimeout() {
-                                System.out.println("metadata fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
+                                System.out.println(MetadataFetcherExample.timex() + "metadata fetch timeout, " + infohash.asHexString() + ",peer:" + peer);
 //                                dht.markPeerBad(infohash, peer);
                             }
 
                             @Override
                             public void onException(Exception e) {
-                                System.out.println("metadata fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
+                                System.out.println(MetadataFetcherExample.timex() + "metadata fetch exceprion, " + infohash.asHexString() + ",peer:" + peer);
 //                                dht.markPeerBad(infohash, peer);
-                                e.printStackTrace();
+//                                e.printStackTrace();
                             }
                         });
                         new Thread(fetcher).start();
-                        System.out.println("metadata fetch start, " + infohash.asHexString() + ",peer:" + peer);
+                        System.out.println(MetadataFetcherExample.timex() + "metadata fetch start, " + infohash.asHexString() + ",peer:" + peer);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -68,12 +72,12 @@ public class MetadataFetcherExample {
 
             @Override
             public void onGetInfoHash(BencodedString infohash) {
-                System.out.println("catch infohash:" + infohash.asHexString());
+                System.out.println(MetadataFetcherExample.timex() + "catch infohash:" + infohash.asHexString());
 //                dht.queryPeers(infohash, this);
             }
 
             @Override
-            public void onAnnouncePeer(BencodedString infohash, Peer peer) {
+            public void onAnnouncePeer(BencodedString infohash, Peer peer, String tag) {
 //                System.out.println("catch announce peer:" + infohash.asHexString() + ", peer:" + peer);
                 List<Peer> peers = new ArrayList<>();
                 peers.add(peer);

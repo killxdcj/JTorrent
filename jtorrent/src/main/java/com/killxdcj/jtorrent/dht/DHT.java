@@ -516,11 +516,20 @@ public class DHT {
         Node node = new Node(krpcPacket.getId(), packet.getAddress(), packet.getPort());
 //        routingTable.putNode(node);
 
+        Peer peer = new Peer(packet.getAddress(), packet.getPort());
+        callBack.onAnnouncePeer(infohash, peer);
+
         int port = reqData.get(KRPC.PORT).asLong().intValue();
-        if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
-            port = packet.getPort();
+        if (port > 0 && port < 65536) {
+            peer = new Peer(packet.getAddress(), port);
+            callBack.onAnnouncePeer(infohash, peer);
         }
-        Peer peer = new Peer(packet.getAddress(), port);
+
+//        if (reqData.containsKey(KRPC.IMPLIED_PORT) && reqData.get(KRPC.IMPLIED_PORT).asLong() != 0) {
+//            port = packet.getPort();
+//        }
+//        Peer peer = new Peer(packet.getAddress(), port);
+
 //        routingTable.putPeer(infohash, peer);
 
 //        LOGGER.info("get announcepeer request, infohash:{}, peer:{}", infohash, peer);
@@ -528,7 +537,7 @@ public class DHT {
         KRPC resp = KRPC.buildAnnouncePeerRespPacket(krpcPacket.getTransId(), nodeId);
         sendKrpcPacket(node, resp);
 
-        callBack.onAnnouncePeer(infohash, peer);
+//        callBack.onAnnouncePeer(infohash, peer);
     }
 
     private void handleAnnouncePeerResp(KRPC req, KRPC resp, DatagramPacket packet) {
