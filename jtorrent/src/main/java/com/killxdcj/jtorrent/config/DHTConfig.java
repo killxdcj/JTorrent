@@ -19,7 +19,7 @@ public class DHTConfig {
     }};
     private int nodesPerBuckets = 8;
     private int maxNodes = -1;
-    private int findNodePeriod =  30 * 1000;
+    private int findNodePeriod =  1000;
     private int routingTableRebuildPerior = 30 * 60 * 1000;
     private int nodePingCheckPeriod = 60 * 1000;
     private int nodeMaxUnactiveTimeBeforePing = 10 * 60 * 1000;

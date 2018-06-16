@@ -209,4 +209,8 @@ public class RoutingTable {
     }
 
     // TODO every 1 hour rebuild routetable
+
+    public void clean() {
+
+    }
 }
